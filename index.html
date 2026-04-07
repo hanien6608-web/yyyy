@@ -129,35 +129,46 @@
 
         /* التصنيفات تحت الهيدر */
         .categories-container {
+            margin: 20px auto;
+            width: 95%;
+            max-width: 750px; /* عرض مريح لعرض التصنيفات بشكل احترافي */
+            background: var(--card-bg); 
+            border-radius: 20px; 
+            padding: 15px 25px;
+            border: 1px solid rgba(212, 163, 115, 0.2);
+            backdrop-filter: blur(15px);
             overflow-x: auto;
-            padding: 10px 5%;
-            margin-top: -10px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            scrollbar-width: none; /* إخفاء شريط التمرير للمظهر الجمالي */
         }
+        .categories-container::-webkit-scrollbar { display: none; }
 
         .categories-list {
             display: flex;
-            gap: 12px;
+            justify-content: flex-start;
+            gap: 15px;
             list-style: none;
             white-space: nowrap;
         }
 
         .category-item {
             padding: 10px 22px;
-            background: rgba(0, 0, 0, 0.4);
-            border: 1px solid rgba(188, 138, 95, 0.3);
-            border-radius: 20px;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(212, 163, 115, 0.1);
+            border-radius: 12px;
             font-size: 0.85rem;
-            color: var(--paper-light);
+            color: var(--accent-wood);
             cursor: pointer;
             font-weight: bold;
             transition: 0.3s;
         }
 
-        .category-item.active {
+        .category-item.active, .category-item:hover {
             background: var(--accent-wood);
             color: var(--wood-dark);
-            box-shadow: 0 4px 15px rgba(188, 138, 95, 0.4);
+            box-shadow: 0 0 15px rgba(212, 163, 115, 0.4);
             border-color: transparent;
+            transform: translateY(-2px);
         }
 
         /* —-------------------------------------------------
@@ -210,12 +221,64 @@
             width: 100%;
             height: 100%;
             object-fit: contain;
-            transition: opacity 0.6s ease-in-out;
+            /* تعديل: إضافة transition لـ transform أيضاً */
+            transition: opacity 0.6s ease-in-out, transform 0.6s ease-in-out;
         }
 
-        .hover-img { opacity: 0; }
-        .book-card:hover .main-img { opacity: 0; }
-        .book-card:hover .hover-img { opacity: 1; }
+        .main-img { opacity: 1; transform: scale(1); z-index: 1; }
+        .hover-img { opacity: 0; transform: scale(1.1); z-index: 1; }
+
+        /* مناطق التحسس (يمين ويسار) */
+        .hover-trigger {
+            position: absolute;
+            top: 0;
+            width: 50%;
+            height: 100%;
+            z-index: 10; /* فوق الصور وتحت الأيقونات */
+        }
+        .trigger-right { right: 0; }
+        .trigger-left { left: 0; }
+
+        /* التفاعل: يمين يظهر الصورة 1، يسار يظهر الصورة 2 */
+        .trigger-left:hover ~ .hover-img { opacity: 1; transform: scale(1); }
+        .trigger-left:hover ~ .main-img { opacity: 0; transform: scale(0.9); }
+        
+        /* تفاعل الدوائر مع اليمين واليسار */
+        .dot:first-child { background: var(--accent-wood); transform: scale(1.2); } /* الافتراضي */
+        
+        .trigger-left:hover ~ .image-indicators .dot:first-child { 
+            background: rgba(212, 163, 115, 0.3); 
+            transform: scale(1); 
+        }
+        .trigger-left:hover ~ .image-indicators .dot:last-child { 
+            background: var(--accent-wood); 
+            transform: scale(1.2); 
+        }
+
+        /* حذف تأثير الهوفر القديم العام */
+        /* .book-card:hover .main-img { ... } - تم استبداله بالـ triggers */
+
+        /* دوائر مؤشر الصور */
+        .image-indicators {
+            position: absolute;
+            bottom: 15px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 8px;
+            z-index: 20;
+        }
+
+        .dot {
+            width: 8px;
+            height: 8px;
+            background: rgba(212, 163, 115, 0.3);
+            border-radius: 50%;
+            transition: 0.3s ease;
+        }
+
+        .dot.active { background: var(--accent-wood); transform: scale(1.2); }
+
 
         /* الأيقونات فوق الصورة بنفس طريقة الموبايل */
         .book-actions {
@@ -471,8 +534,8 @@
                     <li class="category-item active">الكل</li>
                     <li class="category-item">روايات</li>
                     <li class="category-item">فانتزيا</li>
-                    <li class="category-item">تاريخ</li>
-                    <li class="category-item">علوم</li>
+                    <li class="category-item">تنمية ذاتية</li>
+                    <li class="category-item">ديني</li>
                     <li class="category-item">رعب</li>
                 </ul>
             </div>
@@ -558,6 +621,10 @@
                         <div class="image-box">
                             <img src="${book.image_url}" class="main-img">
                             <img src="${book.image_url2 || book.image_url}" class="hover-img">
+                            <div class="image-indicators">
+                                <div class="dot active"></div>
+                                <div class="dot"></div>
+                            </div>
                         </div>
 
                         <div class="book-actions">
