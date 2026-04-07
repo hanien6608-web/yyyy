@@ -311,15 +311,18 @@
            4. الفوتر التفاعلي والاهداء (Footer & Contact)
            —------------------------------------------------- */
         footer {
-            padding: 40px 0 0 0; /* إزالة المسافات الجانبية والسفلية للالتصاق */
+            padding: 20px 0 0 0;
             margin-top: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
         }
 
         .dedication-box {
             background: var(--card-bg); /* نفس لون خلفية كارت الكتاب */
             backdrop-filter: blur(15px); /* إضافة نفس تأثير التغبيش الزجاجي للكروت */
             border-radius: 0; /* لجعل الزوايا حادة */
-            padding: 30px 30px 100px 30px; /* زيادة المسافة السفلية الداخلية لضمان ظهور النص فوق البار العائم */
+            padding: 40px 30px; 
             border: none; /* إزالة كافة الحدود لإخفاء الخطوط الملونة تماماً من جميع الجهات */
             box-shadow: 0 -10px 30px rgba(0,0,0,0.5);
             text-align: center;
@@ -376,22 +379,20 @@
 
         /* الـ Floating Footer العائم تحت خالص للموبايل بنفس طريقة الموبايل */
         .bottom-bar {
-            position: fixed;
-            bottom: 15px;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 90%;
-            max-width: 500px;
-            background: rgba(0, 0, 0, 0.75); /* أسود شفاف فخم للموبايل */
-            border-radius: 50px;
-            padding: 10px 25px;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            backdrop-filter: blur(10px);
+            position: relative;
+            margin: 60px auto 30px auto; /* إخراجه من مربع الإهداء ووضعه فوقه بمسافة واضحة كعنصر مستقل */
+            width: 95%;
+            max-width: 480px;
+            background: var(--card-bg); 
+            border-radius: 20px; 
+            padding: 15px 25px;
+            border: 1px solid rgba(212, 163, 115, 0.2); /* نفس حدود كارت الكتاب */
+            backdrop-filter: blur(15px); /* نفس درجة التغبيش الزجاجي لكروت الكتب */
             z-index: 2000;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5); /* نفس ظل كارت الكتاب */
             color: var(--accent-wood);
         }
 
@@ -400,22 +401,43 @@
             display: flex;
             flex-direction: column;
             align-items: center;
-            gap: 5px;
+            gap: 4px;
             cursor: pointer;
-            font-size: 0.7rem;
-            opacity: 0.8;
+            font-size: 0.75rem;
+            opacity: 0.7;
             transition: 0.3s;
         }
 
-        .bottom-bar-item:hover, .bottom-bar-item.active {
+        .bottom-bar-item:hover {
             opacity: 1;
             transform: translateY(-3px);
+        }
+
+        .bottom-bar-item:hover .bar-icon,
+        .bottom-bar-item.active .bar-icon {
+            background: var(--accent-wood);
+            color: var(--wood-dark); /* تغيير اللون للخشبي الداكن عند التفعيل */
+            box-shadow: 0 0 15px rgba(212, 163, 115, 0.4);
+            transform: scale(1.1);
+        }
+
+        .bottom-bar-item.active {
+            opacity: 1;
             color: var(--paper-light);
         }
 
         .bar-icon {
+            width: 50px;
+            height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%; /* أيقونات دائرية مثل المفضلة في الكارت */
+            background: rgba(0, 0, 0, 0.4);
+            border: 1px solid rgba(255, 255, 255, 0.1);
             font-size: 1.5rem;
             color: var(--accent-wood);
+            transition: 0.3s;
         }
 
         /* رسالة التحميل والخطأ */
@@ -461,18 +483,6 @@
                 </div>
             </main>
 
-            <footer>
-                <div class="dedication-box">
-                    <h3>إهداء خاص <i class="bi bi-feather"></i></h3>
-                    <p>لكل من يجد ضالته بين الأسطر، لكل من يسافر دون أن يتحرك، ولكل عشاق الكتب.. هذا المكان لكم.</p>
-                    
-                    <ul class="social-links">
-                        <li><a href="https://facebook.com/u_library" target="_blank"><i class="bi bi-facebook"></i> فيس بوك</a></li>
-                        <li><a href="https://wa.me/u_library" target="_blank"><i class="bi bi-whatsapp"></i> واتس آب</a></li>
-                    </ul>
-                </div>
-            </footer>
-
             <div class="bottom-bar">
                 <div class="bottom-bar-item active">
                     <span class="bar-icon"><i class="bi bi-house-door"></i></span>
@@ -491,6 +501,18 @@
                     <span>الدعم</span>
                 </div>
             </div>
+
+            <footer>
+                <div class="dedication-box">
+                    <h3>إهداء خاص <i class="bi bi-feather"></i></h3>
+                    <p>لكل من يجد ضالته بين الأسطر، لكل من يسافر دون أن يتحرك، ولكل عشاق الكتب.. هذا المكان لكم.</p>
+                    
+                    <ul class="social-links">
+                        <li><a href="https://facebook.com/u_library" target="_blank"><i class="bi bi-facebook"></i> فيس بوك</a></li>
+                        <li><a href="https://wa.me/u_library" target="_blank"><i class="bi bi-whatsapp"></i> واتس آب</a></li>
+                    </ul>
+                </div>
+            </footer>
 
         </div>
     </div>
@@ -569,6 +591,15 @@
                 categories.forEach(i => i.classList.remove('active'));
                 item.classList.add('active');
                 // هنا ممكن تضيفي فلترة للداتا مستقبلاً
+            });
+        });
+
+        // تفعيل التنقل في الشريط السفلي
+        const bottomItems = document.querySelectorAll('.bottom-bar-item');
+        bottomItems.forEach(item => {
+            item.addEventListener('click', () => {
+                bottomItems.forEach(i => i.classList.remove('active'));
+                item.classList.add('active');
             });
         });
     </script>
