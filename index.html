@@ -56,7 +56,7 @@
             min-height: 100vh;
             display: flex;
             flex-direction: column;
-            padding-bottom: 0; /* تم حذف المسافة السفلية ليلتصق صندوق الإهداء بآخر الشاشة */
+            padding-bottom: 0; /* إضافة مسافة في الأسفل لضمان عدم اختفاء المحتوى خلف الشريط الثابت */
         }
 
         /* —-------------------------------------------------
@@ -440,8 +440,11 @@
 
         /* الـ Floating Footer العائم تحت خالص للموبايل بنفس طريقة الموبايل */
         .bottom-bar {
-            position: relative;
-            margin: 60px auto 30px auto; /* إخراجه من مربع الإهداء ووضعه فوقه بمسافة واضحة كعنصر مستقل */
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            margin: 0;
             width: 95%;
             max-width: 480px;
             background: var(--card-bg); 
