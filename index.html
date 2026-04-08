@@ -377,6 +377,7 @@
             display: flex;
             flex-direction: column;
             gap: 20px;
+            padding-bottom: 0; /* إلغاء المسافة الإضافية */
         }
 
         .dedication-box {
@@ -440,19 +441,17 @@
 
         /* الـ Floating Footer العائم تحت خالص للموبايل بنفس طريقة الموبايل */
         .bottom-bar {
-            position: fixed;
+            position: sticky;
             bottom: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            margin: 0;
-            width: 95%;
+            margin: 0 auto 20px; /* توسيط الشريط مع مسافة سفلية بسيطة */
+            width: 90%;
             max-width: 480px;
             background: var(--card-bg); 
             border-radius: 20px; 
             padding: 15px 25px;
             border: 1px solid rgba(212, 163, 115, 0.2); /* نفس حدود كارت الكتاب */
             backdrop-filter: blur(15px); /* نفس درجة التغبيش الزجاجي لكروت الكتب */
-            z-index: 2000;
+            z-index: 9999;
             display: flex;
             justify-content: space-between;
             align-items: center;
@@ -552,6 +551,26 @@
                 </div>
             </main>
 
+            <!-- نقل الشريط ليكون داخل الـ main-content وقبل الفوتر مباشرة ليعمل نظام الـ sticky -->
+            <div class="bottom-bar">
+                <div class="bottom-bar-item active">
+                    <span class="bar-icon"><i class="bi bi-house-door"></i></span>
+                    <span>الرئيسية</span>
+                </div>
+                <div class="bottom-bar-item">
+                    <span class="bar-icon"><i class="bi bi-cart3"></i></span>
+                    <span>السلة</span>
+                </div>
+                <div class="bottom-bar-item">
+                    <span class="bar-icon"><i class="bi bi-bookmark-heart"></i></span>
+                    <span>المفضلة</span>
+                </div>
+                <div class="bottom-bar-item" onclick="showSupport()">
+                    <span class="bar-icon"><i class="bi bi-headset"></i></span>
+                    <span>الدعم</span>
+                </div>
+            </div>
+
             <footer>
                 <div class="dedication-box">
                     <h3>إهداء خاص <i class="bi bi-feather"></i></h3>
@@ -564,25 +583,6 @@
                 </div>
             </footer>
 
-        </div>
-    </div>
-
-    <div class="bottom-bar">
-        <div class="bottom-bar-item active">
-            <span class="bar-icon"><i class="bi bi-house-door"></i></span>
-            <span>الرئيسية</span>
-        </div>
-        <div class="bottom-bar-item">
-            <span class="bar-icon"><i class="bi bi-cart3"></i></span>
-            <span>السلة</span>
-        </div>
-        <div class="bottom-bar-item">
-            <span class="bar-icon"><i class="bi bi-bookmark-heart"></i></span>
-            <span>المفضلة</span>
-        </div>
-        <div class="bottom-bar-item" onclick="showSupport()">
-            <span class="bar-icon"><i class="bi bi-headset"></i></span>
-            <span>الدعم</span>
         </div>
     </div>
 
@@ -655,9 +655,10 @@
 
         // 5. نظام التبديل بين العناصر النشطة (Active State)
         function initTabs(selector) {
-            document.querySelectorAll(selector).forEach(item => {
+            const items = document.querySelectorAll(selector);
+            items.forEach(item => {
                 item.addEventListener('click', function() {
-                    document.querySelectorAll(selector).forEach(i => i.classList.remove('active'));
+                    items.forEach(i => i.classList.remove('active'));
                     this.classList.add('active');
                 });
             });
