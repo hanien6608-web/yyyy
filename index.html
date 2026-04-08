@@ -77,11 +77,14 @@
         }
 
         .logo {
-            font-size: 1.8rem;
-            font-weight: bold;
-            color: var(--paper-light);
+            font-size: 2.2rem;
+            font-weight: 800;
+            background: linear-gradient(to bottom, #fde4ad, #d4a373);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
             letter-spacing: 2px;
-            text-shadow: 0 0 15px rgba(255, 255, 255, 0.2);
+            filter: drop-shadow(2px 4px 6px rgba(0,0,0,0.5));
+            font-family: 'Cairo', sans-serif;
         }
 
         /* مربع البحث الفخم بنفس فكرة الموبايل */
@@ -108,6 +111,7 @@
             outline: none;
             backdrop-filter: blur(10px);
             transition: 0.3s;
+            touch-action: manipulation;
         }
 
         .search-input:focus {
@@ -159,6 +163,7 @@
             cursor: pointer;
             font-weight: bold;
             transition: 0.3s;
+            user-select: none;
         }
 
         .category-item.active, .category-item:hover {
@@ -202,6 +207,11 @@
             overflow: visible; /* للسماح للزر بالخروج عن المربع */
             display: flex;
             flex-direction: column;
+        }
+        
+        /* تحسين التفاعل باللمس */
+        .book-card:active {
+            transform: scale(0.98);
         }
 
         .book-card:hover {
@@ -374,13 +384,23 @@
             font-size: 1.1rem;
             cursor: pointer;
             z-index: 50;
-            transition: 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
         }
 
         .cart-btn:hover {
             background: var(--accent-wood);
             color: var(--wood-dark);
             transform: scale(1.1) rotate(-10deg);
+        }
+
+        /* حالة النجاح عند إضافة كتاب */
+        .cart-btn.success {
+            background: var(--accent-wood) !important;
+            color: var(--wood-dark) !important;
+            border: 2px solid var(--paper-light);
+            box-shadow: 0 0 25px rgba(212, 163, 115, 0.8);
+            transform: scale(1.1) rotate(0deg);
+            font-size: 1.4rem; /* تكبير العلامة */
         }
 
         /* —-------------------------------------------------
@@ -518,6 +538,140 @@
             transition: 0.3s;
         }
 
+        /* —-------------------------------------------------
+           5. سلة المشتريات الجانبية (Cart Drawer)
+           —------------------------------------------------- */
+        .cart-drawer {
+            position: fixed;
+            top: 0;
+            left: -100%; /* مخفي لليسار */
+            width: 100%;
+            max-width: 360px;
+            height: 100%;
+            background: var(--card-bg);
+            backdrop-filter: blur(25px);
+            z-index: 10001;
+            transition: 0.5s cubic-bezier(0.77, 0, 0.175, 1);
+            padding: 25px;
+            display: flex;
+            flex-direction: column;
+            border-right: 1px solid rgba(212, 163, 115, 0.2);
+            box-shadow: 10px 0 50px rgba(0,0,0,0.8);
+        }
+
+        .cart-drawer.open { left: 0; }
+
+        .drawer-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.6);
+            backdrop-filter: blur(5px);
+            z-index: 10000;
+            display: none;
+            opacity: 0;
+            transition: 0.4s;
+        }
+
+        .drawer-overlay.open { display: block; opacity: 1; }
+
+        .cart-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            border-bottom: 1px solid rgba(212, 163, 115, 0.2);
+            padding-bottom: 15px;
+        }
+
+        .close-drawer { cursor: pointer; font-size: 1.5rem; color: var(--accent-wood); }
+
+        /* تنسيق قائمة الكتب داخل السلة */
+        .cart-items-list {
+            flex-grow: 1;
+            overflow-y: auto;
+            margin-bottom: 20px;
+            padding-left: 5px;
+        }
+
+        .cart-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            background: rgba(255, 255, 255, 0.03);
+            padding: 10px;
+            border-radius: 12px;
+            margin-bottom: 12px;
+            border: 1px solid rgba(212, 163, 115, 0.1);
+        }
+
+        .cart-item img { width: 50px; height: 70px; object-fit: cover; border-radius: 6px; }
+        .cart-item-info { flex-grow: 1; }
+        .cart-item-info h4 { font-size: 0.85rem; color: var(--paper-light); margin-bottom: 4px; }
+        .cart-item-info p { font-size: 0.8rem; color: var(--accent-wood); font-weight: bold; }
+
+        .qty-controls {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: rgba(0, 0, 0, 0.3);
+            padding: 5px 10px;
+            border-radius: 20px;
+            border: 1px solid rgba(212, 163, 115, 0.2);
+        }
+
+        .qty-btn { cursor: pointer; color: var(--accent-wood); font-weight: bold; user-select: none; }
+        .qty-val { color: var(--paper-light); font-size: 0.9rem; min-width: 15px; text-align: center; }
+        .total-price-area { font-size: 1.1rem; color: var(--accent-wood); text-align: center; margin: 10px 0; font-weight: bold; }
+
+        .order-form {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .input-group {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+
+        .input-group i {
+            position: absolute;
+            right: 15px;
+            color: var(--accent-wood);
+            font-size: 1.1rem;
+        }
+
+        .input-group input, .input-group textarea {
+            width: 100%;
+            padding: 12px 45px 12px 15px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(212, 163, 115, 0.2);
+            border-radius: 12px;
+            color: var(--paper-light);
+            font-family: 'Cairo';
+            outline: none;
+        }
+
+        .confirm-order-btn {
+            background: var(--accent-wood);
+            color: var(--wood-dark);
+            border: none;
+            padding: 15px;
+            border-radius: 12px;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: 10px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
+        }
+
         /* رسالة التحميل والخطأ */
         .loading-msg, .error-msg {
             grid-column: 1 / -1;
@@ -530,6 +684,28 @@
         @keyframes fadeInUp {
             from { opacity: 0; transform: translateY(20px); }
             to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* أيقونة العدد فوق السلة */
+        .cart-count-badge {
+            position: absolute;
+            top: -5px;
+            right: -5px;
+            background: var(--accent-wood);
+            color: var(--wood-dark);
+            font-size: 0.7rem;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            border: 2px solid var(--wood-dark);
+            top: -2px;
+            right: -2px;
+            z-index: 10000; /* Ensure it's always on top */
+            display: none; /* مخفي لو السلة فاضية */
         }
     </style>
 </head>
@@ -549,7 +725,7 @@
                 </div>
             </header>
 
-            <div class="categories-container">
+            <div class="categories-container" id="cats-nav">
                 <ul class="categories-list">
                     <li class="category-item active">الكل</li>
                     <li class="category-item">روايات</li>
@@ -566,18 +742,62 @@
                 </div>
             </main>
 
+            <!-- سلة المشتريات الجانبية -->
+            <div id="drawer-overlay" class="drawer-overlay" onclick="closeCart()"></div>
+            <div id="cart-drawer" class="cart-drawer">
+                <div class="cart-header">
+                    <h3>تأكيد طلبك <i class="bi bi-bag-check"></i></h3>
+                    <span class="close-drawer" onclick="closeCart()"><i class="bi bi-x-lg"></i></span>
+                </div>
+
+                <div class="cart-items-list" id="cart-items-container">
+                    <!-- هنا تظهر الكتب المضافة -->
+                </div>
+                <div class="total-price-area" id="cart-total-price">إجمالي الطلب: 0 ج.م</div>
+
+                <div class="order-form">
+                    <div class="input-group">
+                        <i class="bi bi-person"></i>
+                        <input type="text" placeholder="الاسم الثلاثي">
+                    </div>
+                    <div class="input-group">
+                        <i class="bi bi-phone"></i>
+                        <input type="tel" placeholder="رقم الموبايل">
+                    </div>
+                    <div class="input-group">
+                        <i class="bi bi-whatsapp"></i>
+                        <input type="tel" placeholder="رقم الواتساب">
+                    </div>
+                    <div class="input-group">
+                        <i class="bi bi-geo-alt"></i>
+                        <input type="text" placeholder="المحافظة">
+                    </div>
+                    <div class="input-group">
+                        <i class="bi bi-house-door"></i>
+                        <textarea placeholder="العنوان بالتفصيل" rows="3"></textarea>
+                    </div>
+                    <button class="confirm-order-btn">تأكيد وشراء الآن <i class="bi bi-whatsapp"></i></button>
+                </div>
+            </div>
+
             <!-- نقل الشريط ليكون داخل الـ main-content وقبل الفوتر مباشرة ليعمل نظام الـ sticky -->
-            <div class="bottom-bar">
-                <div class="bottom-bar-item active">
+            <div class="bottom-bar" id="bottom-nav-bar">
+                <div class="bottom-bar-item active" onclick="showHome()">
                     <span class="bar-icon"><i class="bi bi-house-door"></i></span>
                     <span>الرئيسية</span>
                 </div>
-                <div class="bottom-bar-item">
-                    <span class="bar-icon"><i class="bi bi-cart3"></i></span>
+                <div class="bottom-bar-item" onclick="openCart()">
+                    <span class="bar-icon">
+                        <i class="bi bi-cart3"></i>
+                        <span id="cart-badge" class="cart-count-badge">0</span>
+                    </span>
                     <span>السلة</span>
                 </div>
-                <div class="bottom-bar-item">
-                    <span class="bar-icon"><i class="bi bi-bookmark-heart"></i></span>
+                <div class="bottom-bar-item" onclick="showWishlist(this)">
+                    <span class="bar-icon">
+                        <i class="bi bi-bookmark-heart"></i>
+                        <span id="wish-badge" class="cart-count-badge">0</span>
+                    </span>
                     <span>المفضلة</span>
                 </div>
                 <div class="bottom-bar-item" onclick="showSupport()">
@@ -585,6 +805,7 @@
                     <span>الدعم</span>
                 </div>
             </div>
+
 
             <footer>
                 <div class="dedication-box">
@@ -606,30 +827,46 @@
         const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl3Ym1hbWtscXlyYWh3cWlmcWRqIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NTQ4MDM5OSwiZXhwIjoyMDkxMDU2Mzk5fQ.bHOZHb1zDAe-LUX1Vtt5G5UabhfHxUlQvrplxvZ0Dgo'; 
         const _supabase = supabase.createClient(supabaseUrl, supabaseKey);
 
+        // مصفوفة السلة (تحميل من الذاكرة المحلية)
+        let cart = JSON.parse(localStorage.getItem('utopia_cart')) || [];
+        let wishlist = JSON.parse(localStorage.getItem('utopia_wishlist')) || [];
+        let allBooks = []; // لتخزين الكتب محلياً للفلترة السريعة
+
         // 1. تشغيل الداتا فور فتح الصفحة
+        document.querySelector('.search-input').addEventListener('input', (e) => {
+            const term = e.target.value.toLowerCase();
+            const filtered = allBooks.filter(b => b.title.toLowerCase().includes(term) || b.author.toLowerCase().includes(term));
+            renderBooks(filtered);
+        });
         document.addEventListener('DOMContentLoaded', getMyLibraryData);
+        document.addEventListener('DOMContentLoaded', updateCartUI);
+        document.addEventListener('DOMContentLoaded', updateWishUI);
 
         // 2. دالة جلب البيانات من سوبابيز وعرضها
         async function getMyLibraryData() {
-            const container = document.getElementById('books-list');
-            
-            // سحب البيانات من جدول books بالاسم سمول
             const { data, error } = await _supabase
                 .from('books') 
                 .select('*');
 
-            // التعامل مع الخطأ (لو الـ Key غلط)
             if (error) {
                 console.error("Error connecting:", error.message);
-                container.innerHTML = `<div class="error-msg">فشل الاتصال بسوبابيز. تأكدي من الـ URL والـ Key.</div>`;
+                document.getElementById('books-list').innerHTML = `<div class="error-msg">فشل الاتصال.</div>`;
                 return;
             }
 
-            // تجميع الكروت ثم عرضها مرة واحدة للأداء
-            container.innerHTML = data.length === 0 
+            allBooks = data;
+            renderBooks(allBooks);
+        }
+
+        function renderBooks(booksToRender) {
+            const container = document.getElementById('books-list');
+            container.innerHTML = booksToRender.length === 0 
                 ? `<div class="error-msg">الأرفف خالية! ضيفي كتب في سوبابيز أولاً.</div>`
-                : data.map((book, index) => {
+                : booksToRender.map((book, index) => {
                     const hasSecondImg = book.image_url2 && book.image_url2 !== book.image_url;
+                    const isInCart = cart.some(item => item.id === book.id);
+                    const isInWish = wishlist.includes(String(book.id));
+
                     return `
                     <div class="book-card" style="animation: fadeInUp ${0.3 + (index * 0.1)}s ease-out;">
                         
@@ -647,20 +884,169 @@
                         </div>
 
                         <div class="book-actions">
-                            <span class="action-icon" title="أضف للمفضلة"><i class="bi bi-bookmark-heart"></i></span>
+                            <span class="action-icon" onclick="toggleWish('${book.id}')">
+                                <i class="bi ${isInWish ? 'bi-bookmark-heart-fill' : 'bi-bookmark-heart'}"></i>
+                            </span>
                         </div>
 
                         <h3>${book.title}</h3>
                         <p class="author-name">تأليف: ${book.author}</p>
                         <p class="book-desc">${book.description || ''}</p>
                         
-                        <button class="cart-btn"><i class="bi bi-cart-plus"></i></button>
+                        <button class="cart-btn ${isInCart ? 'success' : ''}" onclick="addToCart(this, {id: '${book.id}', title: '${book.title}', price: ${book.price}, img: '${book.image_url}'})">
+                            <i class="bi ${isInCart ? 'bi-check-circle-fill' : 'bi-cart-plus'}"></i>
+                        </button>
 
                         <div class="price-cart-container">
                             <div class="price">${book.price} ج.م</div>
                         </div>
                     </div>
                 `}).join('');
+        }
+
+        // وظيفة إضافة الكتاب وتغيير الأيقونة
+        function addToCart(btn, book) {
+            // التأكد إذا كان الكتاب موجود مسبقاً
+            const existingItem = cart.find(item => item.id === book.id);
+            if (existingItem) {
+                existingItem.qty += 1;
+            } else {
+                cart.push({ ...book, qty: 1 });
+            }
+
+            // حفظ السلة
+            localStorage.setItem('utopia_cart', JSON.stringify(cart));
+            updateCartUI();
+
+            // تغيير الأيقونة والاستايل
+            btn.classList.add('success');
+            btn.innerHTML = '<i class="bi bi-check-circle-fill"></i>';
+            
+            // فتح السلة تلقائياً بعد ثانية
+            setTimeout(() => { openCart(); }, 600);
+        }
+
+        // وظيفة العودة للرئيسية - إصلاح عدم الاستجابة
+        function showHome() {
+            // 1. تمييز زر الرئيسية كنشط
+            document.querySelectorAll('.bottom-bar-item').forEach(i => i.classList.remove('active'));
+            document.querySelector('.bottom-bar-item:first-child').classList.add('active');
+
+            // 2. إظهار التصنيفات
+            document.getElementById('cats-nav').style.display = 'block';
+            renderBooks(allBooks);
+            updateWishUI();
+        }
+        
+        // وظائف المفضلة
+        function toggleWish(bookId) {
+            const sId = String(bookId);
+            const index = wishlist.indexOf(sId);
+            if (index === -1) {
+                wishlist.push(sId);
+            } else {
+                wishlist.splice(index, 1);
+            }
+            localStorage.setItem('utopia_wishlist', JSON.stringify(wishlist));
+            updateWishUI();
+            // لا نحتاج لإعادة رسم كل الكتب هنا، فقط تحديث أيقونة القلب
+            // renderBooks(allBooks); // تم إزالة هذا السطر لمنع إعادة تحميل الصفحة بالكامل
+            // بدلاً من ذلك، نجد الكارت المحدد ونحدث أيقونة القلب فيه فقط
+            const cardActionIcon = document.querySelector(`.book-card .action-icon[onclick*="toggleWish('${sId}')"]`);
+            if (cardActionIcon) {
+                const icon = cardActionIcon.querySelector('i');
+                if (icon) {
+                    icon.className = `bi ${wishlist.includes(sId) ? 'bi-bookmark-heart-fill' : 'bi-bookmark-heart'}`;
+                }
+            }
+        }
+
+        function updateWishUI() {
+            const badge = document.getElementById('wish-badge');
+            badge.innerText = wishlist.length;
+            badge.style.display = wishlist.length > 0 ? 'flex' : 'none'; // يظهر دائماً إذا كان هناك عناصر
+        }
+
+        function showWishlist(el) {
+            // تمييز الزر كنشط
+            document.querySelectorAll('.bottom-bar-item').forEach(i => i.classList.remove('active'));
+            el.classList.add('active');
+
+            // فلترة الكتب
+            const filtered = allBooks.filter(b => wishlist.includes(String(b.id)));
+            
+            // تغيير العنوان أو التفاعل البصري
+            // نتحقق أولاً إذا كانت allBooks قد تم تحميلها
+            if (allBooks.length === 0) {
+                document.getElementById('books-list').innerHTML = `<div class="error-msg">جاري تحميل الكتب... الرجاء المحاولة لاحقاً.</div>`;
+                // يمكن إضافة منطق لإعادة المحاولة بعد التحميل
+            } else if (filtered.length === 0) {
+                document.getElementById('books-list').innerHTML = `<div class="error-msg">قائمة المفضلة فارغة حالياً ❤️</div>`;
+            } else {
+                renderBooks(filtered); // عرض الكتب المفضلة
+            }
+            // إخفاء قسم التصنيفات عند عرض المفضلة لإعطاء مساحة
+            document.getElementById('cats-nav').style.display = 'none';
+        }
+
+        // تحديث واجهة السلة (العدد، العناصر، الإجمالي)
+        function updateCartUI() {
+            const badge = document.getElementById('cart-badge');
+            const container = document.getElementById('cart-items-container');
+            const totalEl = document.getElementById('cart-total-price');
+
+            // 1. تحديث البادج
+            const totalItems = cart.reduce((sum, item) => sum + item.qty, 0);
+            badge.innerText = totalItems;
+            badge.style.display = totalItems > 0 ? 'flex' : 'none';
+
+            // 2. عرض العناصر في السلة
+            if (cart.length === 0) {
+                container.innerHTML = '<p style="text-align:center; padding:20px; opacity:0.5;">السلة خالية حالياً</p>';
+                totalEl.innerText = 'إجمالي الطلب: 0 ج.م';
+                return;
+            }
+
+            let totalPrice = 0;
+            container.innerHTML = cart.map((item, index) => {
+                totalPrice += (item.price * item.qty);
+                return `
+                <div class="cart-item">
+                    <img src="${item.img}" alt="${item.title}">
+                    <div class="cart-item-info">
+                        <h4>${item.title}</h4>
+                        <p>${item.price} ج.م</p>
+                    </div>
+                    <div class="qty-controls">
+                        <span class="qty-btn" onclick="changeQty(${index}, -1)"><i class="bi bi-dash"></i></span>
+                        <span class="qty-val">${item.qty}</span>
+                        <span class="qty-btn" onclick="changeQty(${index}, 1)"><i class="bi bi-plus"></i></span>
+                    </div>
+                </div>
+                `;
+            }).join('');
+
+            totalEl.innerText = `إجمالي الطلب: ${totalPrice} ج.م`;
+        }
+
+        // تغيير الكمية
+        function changeQty(index, delta) {
+            cart[index].qty += delta;
+            if (cart[index].qty <= 0) {
+                cart.splice(index, 1);
+            }
+            localStorage.setItem('utopia_cart', JSON.stringify(cart));
+            updateCartUI();
+        }
+
+        function openCart() {
+            document.getElementById('cart-drawer').classList.add('open');
+            document.getElementById('drawer-overlay').classList.add('open');
+        }
+
+        function closeCart() {
+            document.getElementById('cart-drawer').classList.remove('open');
+            document.getElementById('drawer-overlay').classList.remove('open');
         }
 
         // 4. خدمات العملاء (تجربة تفاعلية)
@@ -673,13 +1059,21 @@
             const items = document.querySelectorAll(selector);
             items.forEach(item => {
                 item.addEventListener('click', function() {
+                    if (this.onclick) return; // إذا كان هناك وظيفة مبرمجة يدوياً لا تتدخل
                     items.forEach(i => i.classList.remove('active'));
                     this.classList.add('active');
+                    
+                    // إضافة منطق الفلترة بناءً على النص داخل التصنيف
+                    const category = this.innerText.trim();
+                    if (category === 'الكل') {
+                        renderBooks(allBooks);
+                    } else {
+                        renderBooks(allBooks.filter(b => b.category === category));
+                    }
                 });
             });
         }
         initTabs('.category-item');
-        initTabs('.bottom-bar-item');
     </script>
 </body>
 </html>
