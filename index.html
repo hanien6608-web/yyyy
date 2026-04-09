@@ -56,7 +56,7 @@
             min-height: 100vh;
             display: flex;
             flex-direction: column;
-            padding-bottom: 90px; /* زيادة المسافة لضمان عدم اختفاء المحتوى خلف الشريط العائم */
+            padding-bottom: 0; /* إضافة مسافة في الأسفل لضمان عدم اختفاء المحتوى خلف الشريط الثابت */
         }
 
         /* —-------------------------------------------------
@@ -85,12 +85,6 @@
             letter-spacing: 2px;
             filter: drop-shadow(2px 4px 6px rgba(0,0,0,0.5));
             font-family: 'Cairo', sans-serif;
-        }
-
-        @media (max-width: 480px) {
-            .logo {
-                font-size: 1.6rem;
-            }
         }
 
         /* مربع البحث الفخم بنفس فكرة الموبايل */
@@ -191,7 +185,7 @@
         .books-grid {
             display: grid;
             grid-template-columns: repeat(2, 1fr);
-            gap: 10px;
+            gap: 15px;
         }
 
         @media (min-width: 1024px) {
@@ -204,7 +198,7 @@
         .book-card {
             background: var(--card-bg); 
             border-radius: 15px;
-            padding: 10px;
+            padding: 12px;
             text-align: center;
             border: 1px solid rgba(212, 163, 115, 0.2);
             backdrop-filter: blur(15px); /* زيادة التغبيش ليظهر النص بوضوح */
@@ -213,10 +207,6 @@
             overflow: visible; /* للسماح للزر بالخروج عن المربع */
             display: flex;
             flex-direction: column;
-        }
-
-        @media (max-width: 480px) {
-            .book-card { padding: 8px; }
         }
         
         /* تحسين التفاعل باللمس */
@@ -312,8 +302,8 @@
         /* الأيقونات فوق الصورة بنفس طريقة الموبايل */
         .book-actions {
             position: absolute;
-            top: 10px;
-            right: 10px; 
+            top: 15px;
+            right: 15px; /* نقل القلب لليمين للتوازن */
             display: flex;
             flex-direction: column;
             gap: 10px;
@@ -321,8 +311,8 @@
         }
 
         .action-icon {
-            width: 30px;
-            height: 30px;
+            width: 35px;
+            height: 35px;
             background: rgba(0, 0, 0, 0.6);
             border-radius: 50%;
             display: flex;
@@ -331,7 +321,7 @@
             color: var(--accent-wood);
             cursor: pointer;
             box-shadow: 0 4px 8px rgba(0,0,0,0.3);
-            font-size: 0.9rem;
+            font-size: 1.1rem;
             border: 1px solid rgba(255, 255, 255, 0.1);
         }
 
@@ -410,7 +400,7 @@
             border: 2px solid var(--paper-light);
             box-shadow: 0 0 25px rgba(212, 163, 115, 0.8);
             transform: scale(1.1) rotate(0deg);
-            font-size: 1.2rem; /* تكبير العلامة */
+            font-size: 1.4rem; /* تكبير العلامة */
         }
 
         /* —-------------------------------------------------
@@ -470,10 +460,6 @@
             margin-top: 20px;
         }
 
-        @media (max-width: 480px) {
-            .social-links { gap: 10px; flex-wrap: wrap; }
-        }
-
         .social-links a {
             text-decoration: none;
             color: var(--text-main);
@@ -490,8 +476,8 @@
 
         /* الـ Floating Footer العائم تحت خالص للموبايل بنفس طريقة الموبايل */
         .bottom-bar {
-            position: fixed;
-            bottom: 15px;
+            position: sticky;
+            bottom: 20px;
             margin: 0 auto 20px; /* توسيط الشريط مع مسافة سفلية بسيطة */
             width: 90%;
             max-width: 480px;
@@ -500,14 +486,12 @@
             padding: 10px 20px;
             border: 1px solid rgba(212, 163, 115, 0.2); /* نفس حدود كارت الكتاب */
             backdrop-filter: blur(15px); /* نفس درجة التغبيش الزجاجي لكروت الكتب */
-            z-index: 999;
+            z-index: 9999;
             display: flex;
             justify-content: space-between;
             align-items: center;
             box-shadow: 0 10px 30px rgba(0,0,0,0.5); /* نفس ظل كارت الكتاب */
             color: var(--accent-wood);
-            left: 50%;
-            transform: translateX(-50%);
         }
 
         .bottom-bar-item {
@@ -723,15 +707,9 @@
             z-index: 10000; /* Ensure it's always on top */
             display: none; /* مخفي لو السلة فاضية */
         }
-
-        /* تعديل لمسافات الصور في الموبايل */
-        @media (max-width: 480px) {
-            .image-box { height: 160px; }
-        }
     </style>
 </head>
-<body>
-    <div class="page-wrapper">
+<body> <div class="page-wrapper">
         <div class="main-content">
 
             <header>
@@ -798,6 +776,7 @@
                         <i class="bi bi-house-door"></i>
                         <textarea placeholder="العنوان بالتفصيل" rows="3"></textarea>
                     </div>
+                    <button class="confirm-order-btn">تأكيد وشراء الآن <i class="bi bi-whatsapp"></i></button>
                     <button class="confirm-order-btn" onclick="confirmOrder()">تأكيد وشراء الآن <i class="bi bi-whatsapp"></i></button>
                 </div>
             </div>
@@ -856,18 +835,20 @@
         let wishlistSeen = false; // متغير للتحكم في إخفاء رقم المفضلة بعد رؤيتها
         let allBooks = []; // لتخزين الكتب محلياً للفلترة السريعة
 
-        // 1. إعدادات البحث والتشغيل الأولي
+        // 1. تشغيل الداتا فور فتح الصفحة
         document.querySelector('.search-input').addEventListener('input', (e) => {
             const term = e.target.value.toLowerCase();
             const filtered = allBooks.filter(b => b.title.toLowerCase().includes(term) || b.author.toLowerCase().includes(term));
             renderBooks(filtered);
         });
-
+        document.addEventListener('DOMContentLoaded', getMyLibraryData);
+        // إضافة console.log للتأكد من تحديث عداد السلة والمفضلة عند تحميل الصفحة
         document.addEventListener('DOMContentLoaded', () => {
-            getMyLibraryData();
             updateCartUI();
             updateWishUI();
         });
+        document.addEventListener('DOMContentLoaded', updateCartUI);
+        document.addEventListener('DOMContentLoaded', updateWishUI);
 
         // 2. دالة جلب البيانات من سوبابيز وعرضها
         async function getMyLibraryData() {
@@ -946,8 +927,8 @@
             updateCartUI();
 
             console.log(`تم إضافة "${book.title}" إلى السلة!`); // رسالة تأكيد للإضافة
-            
-            btn.classList.add('success'); 
+            // تغيير الأيقونة والاستايل
+            btn.classList.add('success');
             btn.innerHTML = '<i class="bi bi-check-circle-fill"></i>';
             
             // فتح السلة تلقائياً بعد ثانية
@@ -1160,16 +1141,13 @@
                     if (this.onclick) return; // إذا كان هناك وظيفة مبرمجة يدوياً لا تتدخل
                     items.forEach(i => i.classList.remove('active'));
                     this.classList.add('active');
-
+                    
+                    // إضافة منطق الفلترة بناءً على النص داخل التصنيف
                     const category = this.innerText.trim();
                     if (category === 'الكل') {
-                        isWishlistView = false; // نضمن الخروج من وضع المفضلة عند اختيار تصنيف
                         renderBooks(allBooks);
-                        updateWishUI();
                     } else {
-                        isWishlistView = false;
                         renderBooks(allBooks.filter(b => b.category === category));
-                        updateWishUI();
                     }
                 });
             });
