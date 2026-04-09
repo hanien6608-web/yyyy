@@ -709,7 +709,8 @@
         }
     </style>
 </head>
-<body> <div class="page-wrapper">
+<body>
+    <div class="page-wrapper">
         <div class="main-content">
 
             <header>
@@ -776,7 +777,7 @@
                         <i class="bi bi-house-door"></i>
                         <textarea placeholder="العنوان بالتفصيل" rows="3"></textarea>
                     </div>
-                    <button class="confirm-order-btn">تأكيد وشراء الآن <i class="bi bi-whatsapp"></i></button>
+                    <button class="confirm-order-btn" onclick="confirmOrder()">تأكيد وشراء الآن <i class="bi bi-whatsapp"></i></button>
                 </div>
             </div>
 
@@ -830,17 +831,22 @@
         // مصفوفة السلة (تحميل من الذاكرة المحلية)
         let cart = JSON.parse(localStorage.getItem('utopia_cart')) || [];
         let wishlist = JSON.parse(localStorage.getItem('utopia_wishlist')) || [];
+        let isWishlistView = false; // متغير لمتابعة هل نحن في صفحة المفضلة أم لا
+        let wishlistSeen = false; // متغير للتحكم في إخفاء رقم المفضلة بعد رؤيتها
         let allBooks = []; // لتخزين الكتب محلياً للفلترة السريعة
 
-        // 1. تشغيل الداتا فور فتح الصفحة
+        // 1. إعدادات البحث والتشغيل الأولي
         document.querySelector('.search-input').addEventListener('input', (e) => {
             const term = e.target.value.toLowerCase();
             const filtered = allBooks.filter(b => b.title.toLowerCase().includes(term) || b.author.toLowerCase().includes(term));
             renderBooks(filtered);
         });
-        document.addEventListener('DOMContentLoaded', getMyLibraryData);
-        document.addEventListener('DOMContentLoaded', updateCartUI);
-        document.addEventListener('DOMContentLoaded', updateWishUI);
+
+        document.addEventListener('DOMContentLoaded', () => {
+            getMyLibraryData();
+            updateCartUI();
+            updateWishUI();
+        });
 
         // 2. دالة جلب البيانات من سوبابيز وعرضها
         async function getMyLibraryData() {
@@ -918,8 +924,9 @@
             localStorage.setItem('utopia_cart', JSON.stringify(cart));
             updateCartUI();
 
-            // تغيير الأيقونة والاستايل
-            btn.classList.add('success');
+            console.log(`تم إضافة "${book.title}" إلى السلة!`); // رسالة تأكيد للإضافة
+            
+            btn.classList.add('success'); 
             btn.innerHTML = '<i class="bi bi-check-circle-fill"></i>';
             
             // فتح السلة تلقائياً بعد ثانية
@@ -928,12 +935,13 @@
 
         // وظيفة العودة للرئيسية - إصلاح عدم الاستجابة
         function showHome() {
+            isWishlistView = false; // عدنا للرئيسية
             // 1. تمييز زر الرئيسية كنشط
             document.querySelectorAll('.bottom-bar-item').forEach(i => i.classList.remove('active'));
             document.querySelector('.bottom-bar-item:first-child').classList.add('active');
 
             // 2. إظهار التصنيفات
-            document.getElementById('cats-nav').style.display = 'block';
+            document.getElementById('cats-nav').style.display = 'block'; // التأكد من إظهار شريط التصنيفات
             renderBooks(allBooks);
             updateWishUI();
         }
@@ -944,30 +952,45 @@
             const index = wishlist.indexOf(sId);
             if (index === -1) {
                 wishlist.push(sId);
+                wishlistSeen = false; // إذا أضافت كتاب جديد، يظهر الرقم مرة أخرى كتنبيه
             } else {
                 wishlist.splice(index, 1);
             }
             localStorage.setItem('utopia_wishlist', JSON.stringify(wishlist));
-            updateWishUI();
-            // لا نحتاج لإعادة رسم كل الكتب هنا، فقط تحديث أيقونة القلب
-            // renderBooks(allBooks); // تم إزالة هذا السطر لمنع إعادة تحميل الصفحة بالكامل
-            // بدلاً من ذلك، نجد الكارت المحدد ونحدث أيقونة القلب فيه فقط
-            const cardActionIcon = document.querySelector(`.book-card .action-icon[onclick*="toggleWish('${sId}')"]`);
-            if (cardActionIcon) {
-                const icon = cardActionIcon.querySelector('i');
-                if (icon) {
-                    icon.className = `bi ${wishlist.includes(sId) ? 'bi-bookmark-heart-fill' : 'bi-bookmark-heart'}`;
+            console.log("Wishlist updated, calling updateWishUI(). Current length:", wishlist.length); // رسالة مراقبة
+            
+            if (isWishlistView) {
+                // إذا كنا في صفحة المفضلة، نحذف الكارت فوراً من الشاشة لاستجابة سريعة
+                showWishlist(document.querySelector('.bottom-bar-item[onclick*="showWishlist"]'));
+            } else {
+                // إذا كنا في الرئيسية، نحدث شكل القلب فقط
+                const cardActionIcon = document.querySelector(`.book-card .action-icon[onclick*="toggleWish('${sId}')"]`);
+                if (cardActionIcon) {
+                    const icon = cardActionIcon.querySelector('i');
+                    if (icon) icon.className = `bi ${wishlist.includes(sId) ? 'bi-bookmark-heart-fill' : 'bi-bookmark-heart'}`;
                 }
             }
+            
+            updateWishUI();
         }
 
         function updateWishUI() {
             const badge = document.getElementById('wish-badge');
-            badge.innerText = wishlist.length;
-            badge.style.display = wishlist.length > 0 ? 'flex' : 'none'; // يظهر دائماً إذا كان هناك عناصر
+            const count = wishlist.length;
+
+            // العداد يختفي لو القيمة 0، أو لو تم الدخول لصفحة المفضلة (wishlistSeen)
+            if (count === 0 || wishlistSeen) {
+                badge.style.display = 'none';
+            } else {
+                badge.innerText = count;
+                badge.style.display = 'flex';
+            }
         }
 
         function showWishlist(el) {
+            isWishlistView = true; // نحن الآن في صفحة المفضلة
+            wishlistSeen = true;   // تم رؤية المفضلة، سيختفي الرقم الآن
+            
             // تمييز الزر كنشط
             document.querySelectorAll('.bottom-bar-item').forEach(i => i.classList.remove('active'));
             el.classList.add('active');
@@ -987,6 +1010,7 @@
             }
             // إخفاء قسم التصنيفات عند عرض المفضلة لإعطاء مساحة
             document.getElementById('cats-nav').style.display = 'none';
+            updateWishUI(); // لإخفاء العداد فوراً عند الدخول
         }
 
         // تحديث واجهة السلة (العدد، العناصر، الإجمالي)
@@ -995,10 +1019,16 @@
             const container = document.getElementById('cart-items-container');
             const totalEl = document.getElementById('cart-total-price');
 
+            console.log("updateCartUI called. Current cart items count:", cart.length); // رسالة مراقبة
             // 1. تحديث البادج
             const totalItems = cart.reduce((sum, item) => sum + item.qty, 0);
-            badge.innerText = totalItems;
-            badge.style.display = totalItems > 0 ? 'flex' : 'none';
+            
+            if (totalItems > 0) {
+                badge.innerText = totalItems;
+                badge.style.display = 'flex';
+            } else {
+                badge.style.display = 'none'; // يختفي لو 0
+            }
 
             // 2. عرض العناصر في السلة
             if (cart.length === 0) {
@@ -1049,6 +1079,53 @@
             document.getElementById('drawer-overlay').classList.remove('open');
         }
 
+        // وظيفة إرسال الطلب عبر الواتساب
+        function confirmOrder() {
+            if (cart.length === 0) {
+                alert("سلة المشتريات فارغة! الرجاء إضافة كتب قبل تأكيد الطلب.");
+                return;
+            }
+
+            const name = document.querySelector('.order-form input[placeholder="الاسم الثلاثي"]').value;
+            const phone = document.querySelector('.order-form input[placeholder="رقم الموبايل"]').value;
+            const whatsapp = document.querySelector('.order-form input[placeholder="رقم الواتساب"]').value;
+            const governorate = document.querySelector('.order-form input[placeholder="المحافظة"]').value;
+            const address = document.querySelector('.order-form textarea[placeholder="العنوان بالتفصيل"]').value;
+
+            if (!name || !phone || !whatsapp || !governorate || !address) {
+                alert("الرجاء تعبئة جميع حقول معلومات الشحن.");
+                return;
+            }
+
+            let message = `*طلب جديد من يوتوبيا لاند:*\n\n`;
+            message += `*الاسم:* ${name}\n`;
+            message += `*رقم الموبايل:* ${phone}\n`;
+            message += `*رقم الواتساب:* ${whatsapp}\n`;
+            message += `*المحافظة:* ${governorate}\n`;
+            message += `*العنوان:* ${address}\n\n`;
+            message += `*تفاصيل الطلب:*\n`;
+
+            let totalOrderPrice = 0;
+            cart.forEach((item, index) => {
+                message += `${index + 1}. ${item.title} (الكمية: ${item.qty}) - ${item.price * item.qty} ج.م\n`;
+                totalOrderPrice += (item.price * item.qty);
+            });
+            message += `\n*الإجمالي الكلي:* ${totalOrderPrice} ج.م\n\n`;
+            message += `شكراً لتسوقكم من يوتوبيا لاند! ✨`;
+
+            // رقم الواتساب الذي سيتم إرسال الطلب إليه (يمكنك تغييره)
+            const recipientWhatsappNumber = '201551455490'; // مثال: رقم واتساب المتجر
+            const whatsappUrl = `https://wa.me/${recipientWhatsappNumber}?text=${encodeURIComponent(message)}`;
+            window.open(whatsappUrl, '_blank');
+
+            // مسح السلة بعد إرسال الطلب
+            cart = [];
+            localStorage.setItem('utopia_cart', JSON.stringify(cart));
+            updateCartUI();
+            closeCart();
+            alert("تم إرسال طلبك بنجاح عبر الواتساب! سنتواصل معك قريباً لتأكيد الطلب.");
+        }
+
         // 4. خدمات العملاء (تجربة تفاعلية)
         function showSupport() {
             alert('💬 جاري فتح شات خدمة العملاء.. لحظة واحدة!');
@@ -1062,13 +1139,16 @@
                     if (this.onclick) return; // إذا كان هناك وظيفة مبرمجة يدوياً لا تتدخل
                     items.forEach(i => i.classList.remove('active'));
                     this.classList.add('active');
-                    
-                    // إضافة منطق الفلترة بناءً على النص داخل التصنيف
+
                     const category = this.innerText.trim();
                     if (category === 'الكل') {
+                        isWishlistView = false; // نضمن الخروج من وضع المفضلة عند اختيار تصنيف
                         renderBooks(allBooks);
+                        updateWishUI();
                     } else {
+                        isWishlistView = false;
                         renderBooks(allBooks.filter(b => b.category === category));
+                        updateWishUI();
                     }
                 });
             });
