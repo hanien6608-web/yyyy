@@ -505,14 +505,14 @@
             width: 100vw;
             height: 100%;
             background: var(--card-bg);
-            backdrop-filter: blur(25px);
+            backdrop-filter: blur(35px); /* زيادة التغبيش لعمق أكبر */
             z-index: 99999;
             transition: 0.5s cubic-bezier(0.77, 0, 0.175, 1);
             padding: 25px;
             display: flex;
             flex-direction: column;
             overflow-y: auto;
-            border-right: 1px solid rgba(212, 163, 115, 0.2);
+            border-left: 2px solid rgba(212, 163, 115, 0.4); /* حدود أوضح وأكثر فخامة */
         }
 
         .cart-drawer.open { right: 0; }
@@ -524,7 +524,13 @@
         }
         .drawer-overlay.open { display: block; opacity: 1; }
 
-        .cart-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; border-bottom: 1px solid rgba(212, 163, 115, 0.2); padding-bottom: 15px; }
+        .cart-header { 
+            display: flex; justify-content: space-between; align-items: center; 
+            margin-bottom: 20px; 
+            border-bottom: 2px solid rgba(212, 163, 115, 0.2); 
+            padding-bottom: 15px; 
+        }
+        .cart-header h3 i { font-size: 1.5rem; vertical-align: middle; margin-right: 8px; } /* تنسيق أيقونة العنوان */
 
         .close-drawer {
             cursor: pointer;
@@ -537,13 +543,99 @@
         }
         .close-drawer:active { transform: scale(0.9); }
 
+        /* --- تنسيقات عناصر السلة الاحترافية --- */
+        #cart-items-container {
+            flex-grow: 1;
+            margin-bottom: 20px;
+        }
+
+        .cart-item {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(212, 163, 115, 0.1);
+            border-radius: 15px;
+            padding: 12px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 15px;
+            position: relative;
+            animation: fadeInUp 0.4s ease-out;
+        }
+
+        .cart-item img {
+            width: 50px;
+            height: 75px;
+            object-fit: contain;
+            border-radius: 5px;
+            background: rgba(0,0,0,0.2);
+        }
+
+        .cart-item-details { flex: 1; }
+        .cart-item-details h4 { font-size: 0.95rem; color: var(--paper-light); margin-bottom: 4px; }
+        .cart-item-details p { font-size: 0.85rem; color: var(--accent-wood); font-weight: bold; }
+
+        .cart-controls {
+            display: flex;
+            align-items: center;
+            gap: 5px; /* تقليل المسافة بين الأزرار والرقم */
+            background: rgba(0,0,0,0.3);
+            padding: 3px 8px; /* تعديل حجم الـ padding */
+            border-radius: 20px;
+            border: 1px solid rgba(212, 163, 115, 0.2);
+        }
+
+        .qty-btn {
+            background: none;
+            border: none;
+            color: var(--accent-wood);
+            cursor: pointer;
+            font-size: 1.5rem; /* تكبير حجم الأيقونة نفسها لتكون ضخمة */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 32px; 
+            height: 32px; 
+            border-radius: 50%; /* جعل الأزرار دائرية */
+            background: transparent; /* إزالة أي تدرجات أو خلفيات ملونة */
+            transition: 0.2s;
+        }
+        .qty-btn:hover { 
+            color: var(--paper-light); /* تغيير اللون فقط عند التحويم بدون تدرجات */
+            transform: scale(1.2); 
+        }
+        
+        .qty-val { font-weight: bold; min-width: 25px; text-align: center; font-size: 1rem; color: var(--paper-light); }
+
+        .remove-item-btn {
+            color: var(--accent-wood); /* تغيير اللون للذهبي */
+            cursor: pointer;
+            font-size: 1.3rem; /* تعديل حجم أيقونة الحذف */
+            margin-left: 15px; /* مسافة أكبر للفصل */
+            transition: 0.3s;
+        }
+        .remove-item-btn:hover { transform: scale(1.2); color: var(--paper-light); } /* لون أفتح عند التحويم */
+
+        .cart-total-section {
+            background: rgba(212, 163, 115, 0.1);
+            padding: 15px;
+            border-radius: 12px;
+            border: 1px dashed var(--accent-wood);
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .cart-total-section h4 {
+            color: var(--paper-light);
+            font-size: 1.1rem;
+        }
+        #total-val { color: var(--accent-wood); font-size: 1.4rem; }
+
         body.cart-open { overflow: hidden; }
 
         .order-form {
             display: flex;
             flex-direction: column;
             gap: 15px;
-            margin-top: 20px;
         }
 
         .input-group {
@@ -667,9 +759,17 @@
     <div id="drawer-overlay" class="drawer-overlay" onclick="closeCart()"></div>
     <div id="cart-drawer" class="cart-drawer">
         <div class="cart-header">
-            <h3>تأكيد طلبك <i class="bi bi-cart-check"></i></h3>
+            <h3>تأكيد طلبك <i class="bi bi-bag-check-fill"></i></h3> <!-- أيقونة جديدة أكثر امتلاءً -->
             <span class="close-drawer" onclick="closeCart()"><i class="bi bi-x-lg"></i></span>
         </div>
+        
+        <!-- حاوية المنتجات المضافة -->
+        <div id="cart-items-container"></div>
+
+        <div id="total-sec" class="cart-total-section" style="display: none;">
+            <h4>إجمالي الطلب: <span id="total-val">0</span> ج.م</h4>
+        </div>
+
         <div class="order-form">
             <div class="input-group">
                 <i class="bi bi-person"></i>
@@ -700,9 +800,12 @@
         const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl3Ym1hbWtscXlyYWh3cWlmcWRqIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NTQ4MDM5OSwiZXhwIjoyMDkxMDU2Mzk5fQ.bHOZHb1zDAe-LUX1Vtt5G5UabhfHxUlQvrplxvZ0Dgo'; 
         const _supabase = supabase.createClient(supabaseUrl, supabaseKey);
 
+        let cart = []; // تخزين السلة
+
         document.addEventListener('DOMContentLoaded', getMyLibraryData);
 
         async function getMyLibraryData() {
+            window.fullData = [];
             const container = document.getElementById('books-list');
             const { data, error } = await _supabase.from('books').select('*');
 
@@ -712,6 +815,7 @@
                 return;
             }
 
+            window.fullData = data;
             container.innerHTML = data.length === 0 
                 ? `<div class="error-msg">الأرفف خالية! ضيفي كتب في سوبابيز أولاً.</div>`
                 : data.map((book, index) => {
@@ -736,7 +840,7 @@
                         <h3>${book.title}</h3>
                         <p class="author-name">تأليف: ${book.author}</p>
                         <p class="book-desc">${book.description || ''}</p>
-                        <button class="cart-btn" onclick="addToCart(this, '${book.title}')"><i class="bi bi-cart-plus"></i></button>
+                        <button class="cart-btn" onclick="addItemToCart(${book.id})"><i class="bi bi-cart-plus"></i></button>
                         <div class="price-cart-container">
                             <div class="price">${book.price} ج.م</div>
                         </div>
@@ -744,10 +848,64 @@
                 `}).join('');
         }
 
-        function addToCart(btn, title) {
-            btn.classList.add('success');
-            btn.innerHTML = '<i class="bi bi-check-lg"></i>';
+        function addItemToCart(id) {
+            const book = window.fullData.find(b => b.id === id);
+            const inCart = cart.find(i => i.id === id);
+            
+            if (inCart) {
+                inCart.qty++;
+            } else {
+                cart.push({ ...book, qty: 1 });
+            }
+            
+            updateCartUI();
             setTimeout(openCart, 600);
+        }
+
+        function updateCartUI() {
+            const container = document.getElementById('cart-items-container');
+            const totalVal = document.getElementById('total-val');
+            const totalSec = document.getElementById('total-sec');
+
+            if (cart.length === 0) {
+                container.innerHTML = `<div style="text-align:center; padding:40px; opacity:0.5;">السلة فارغة.. ابدأي برحلة القراءة! 📚</div>`;
+                totalSec.style.display = 'none';
+                return;
+            }
+
+            totalSec.style.display = 'block';
+            container.innerHTML = cart.map((item, idx) => `
+                <div class="cart-item">
+                    <img src="${item.image_url}">
+                    <div class="cart-item-details">
+                        <h4>${item.title}</h4>
+                        <p>${item.price} ج.م</p>
+                    </div>
+                    <div class="cart-controls">
+                        <button class="qty-btn" onclick="changeQty(${idx}, -1)"><i class="bi bi-dash-circle-fill"></i></button> <!-- أيقونة ممتلئة للناقص -->
+                        <span class="qty-val">${item.qty}</span>
+                        <button class="qty-btn" onclick="changeQty(${idx}, 1)"><i class="bi bi-plus-circle-fill"></i></button> <!-- أيقونة ممتلئة للزائد -->
+                    </div>
+                    <i class="bi bi-trash3 remove-item-btn" onclick="deleteFromCart(${idx})"></i> <!-- أيقونة سلة المهملات -->
+                </div>
+            `).join('');
+
+            const total = cart.reduce((acc, item) => acc + (item.price * item.qty), 0);
+            totalVal.innerText = total;
+        }
+
+        function changeQty(idx, delta) {
+            cart[idx].qty += delta;
+            if (cart[idx].qty < 1) {
+                deleteFromCart(idx);
+            } else {
+                updateCartUI();
+            }
+        }
+
+        function deleteFromCart(idx) {
+            cart.splice(idx, 1);
+            updateCartUI();
         }
 
         function openCart() {
