@@ -530,6 +530,28 @@
             display: none; /* مخفي افتراضياً، يظهر فقط عند وجود كتب */
         }
 
+        /* تنسيق عداد المفضلة - نفس استايل السلة */
+        .global-wish-badge {
+            position: absolute;
+            top: 0;
+            right: 0;
+            background: var(--accent-wood);
+            color: var(--wood-dark);
+            font-size: 0.75rem; 
+            font-weight: 900;
+            border-radius: 50%;
+            min-width: 18px; 
+            height: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 2px;
+            transform: translate(35%, -35%);
+            box-shadow: 0 0 8px rgba(212, 163, 115, 0.5);
+            border: 1px solid var(--paper-light);
+            display: none;
+        }
+
         .cart-drawer {
             position: fixed;
             top: 0;
@@ -851,7 +873,7 @@
             </main>
 
             <div class="bottom-bar">
-                <div class="bottom-bar-item active">
+                <div class="bottom-bar-item active" id="home-tab" onclick="showHome()">
                     <span class="bar-icon"><i class="bi bi-house-door"></i></span>
                     <span>الرئيسية</span>
                 </div>
@@ -862,8 +884,11 @@
                     </span>
                     <span>السلة</span>
                 </div>
-                <div class="bottom-bar-item">
-                    <span class="bar-icon"><i class="bi bi-bookmark-heart"></i></span>
+                <div class="bottom-bar-item" id="wishlist-tab" onclick="showWishlist()">
+                    <span class="bar-icon">
+                        <i class="bi bi-bookmark-heart"></i>
+                        <span id="global-wish-count" class="global-wish-badge">0</span>
+                    </span>
                     <span>المفضلة</span>
                 </div>
                 <div class="bottom-bar-item" onclick="showSupport()">
@@ -959,6 +984,10 @@
         const _supabase = supabase.createClient(supabaseUrl, supabaseKey);
 
         let cart = []; // مصفوفة لتخزين عناصر السلة
+        let wishlist = JSON.parse(localStorage.getItem('wishlist')) || [];
+        let wishlistNewCount = parseInt(localStorage.getItem('wishlistNewCount')) || 0;
+        let currentView = 'home';
+
         // حاول تحميل السلة من LocalStorage عند بدء التشغيل
         try {
             const storedCart = localStorage.getItem('cart');
@@ -1015,6 +1044,7 @@
             getMyLibraryData();
             populateProvinces(); // ملء قائمة المحافظات عند تحميل الصفحة
             updateGlobalCartCount(); // تحديث عداد السلة عند تحميل الصفحة
+            updateGlobalWishCount(); // تحديث عداد المفضلة
             initTabs('.category-item');
             initTabs('.bottom-bar-item');
         });
@@ -1031,36 +1061,40 @@
             }
 
             window.fullData = data;
+            renderBooksList(data);
+        }
+
+        function renderBooksList(data) {
+            const container = document.getElementById('books-list');
             container.innerHTML = data.length === 0 
                 ? `<div class="error-msg">الأرفف خالية! ضيفي كتب في سوبابيز أولاً.</div>`
-                : data.map((book, index) => {
-                    const has2nd = book.image_url2 && book.image_url2 !== book.image_url;
-                    return `
-                    <div class="book-card" style="animation: fadeInUp ${0.3 + (index * 0.1)}s ease-out;">
-                        <div class="image-box">
-                            ${has2nd ? `
-                                <div class="hover-trigger trigger-right"></div>
-                                <div class="hover-trigger trigger-left"></div>
-                            ` : ''}
-                            <img src="${book.image_url}" class="main-img">
-                            ${has2nd ? `<img src="${book.image_url2}" class="hover-img">` : ''}
-                            <div class="image-indicators">
-                                <div class="dot active"></div>
-                                ${has2nd ? `<div class="dot"></div>` : ''}
-                            </div>
-                        </div>
-                        <div class="book-actions">
-                            <span class="action-icon" title="أضف للمفضلة"><i class="bi bi-bookmark-heart"></i></span>
-                        </div>
-                        <h3>${book.title}</h3>
-                        <p class="author-name">تأليف: ${book.author}</p>
-                        <p class="book-desc">${book.description || ''}</p>
-                        <button class="cart-btn" id="add-btn-${book.id}" onclick="addItemToCart(${book.id})"><i class="bi bi-cart-plus"></i></button>
-                        <div class="price-cart-container">
-                            <div class="price">${book.price} ج.م</div>
-                        </div>
+                : data.map((book, index) => renderBookCard(book, index)).join('');
+            
+            updateCartUI(); // لضمان ظهور علامات الصح
+        }
+
+        function renderBookCard(book, index) {
+            const has2nd = book.image_url2 && book.image_url2 !== book.image_url;
+            const isInWishlist = wishlist.includes(book.id);
+            return `
+                <div class="book-card" style="animation: fadeInUp ${0.3 + (index * 0.1)}s ease-out;">
+                    <div class="image-box">
+                        ${has2nd ? `<div class="hover-trigger trigger-right"></div><div class="hover-trigger trigger-left"></div>` : ''}
+                        <img src="${book.image_url}" class="main-img">
+                        ${has2nd ? `<img src="${book.image_url2}" class="hover-img">` : ''}
+                        <div class="image-indicators"><div class="dot active"></div>${has2nd ? `<div class="dot"></div>` : ''}</div>
                     </div>
-                `}).join('');
+                    <div class="book-actions">
+                        <span class="action-icon" title="المفضلة" onclick="toggleWishlist(${book.id})">
+                            <i id="wish-icon-${book.id}" class="bi ${isInWishlist ? 'bi-bookmark-heart-fill' : 'bi-bookmark-heart'}"></i>
+                        </span>
+                    </div>
+                    <h3>${book.title}</h3>
+                    <p class="author-name">تأليف: ${book.author}</p>
+                    <p class="book-desc">${book.description || ''}</p>
+                    <button class="cart-btn" id="add-btn-${book.id}" onclick="addItemToCart(${book.id})"><i class="bi bi-cart-plus"></i></button>
+                    <div class="price-cart-container"><div class="price">${book.price} ج.م</div></div>
+                </div>`;
         }
 
         function addItemToCart(id) {
@@ -1104,6 +1138,7 @@
             }
 
             updateGlobalCartCount(); // تحديث عداد السلة العالمي
+            updateGlobalWishCount(); // تحديث عداد المفضلة
             if (cart.length === 0) {
                 container.innerHTML = `
                     <div style="text-align:center; padding:80px 20px; color: var(--paper-light); display: flex; flex-direction: column; align-items: center; justify-content: center;">
@@ -1195,6 +1230,55 @@
             }
         }
 
+        function toggleWishlist(id) {
+            const idx = wishlist.indexOf(id);
+            if (idx === -1) {
+                wishlist.push(id);
+                wishlistNewCount++;
+            } else {
+                wishlist.splice(idx, 1);
+            }
+            localStorage.setItem('wishlist', JSON.stringify(wishlist));
+            localStorage.setItem('wishlistNewCount', wishlistNewCount);
+            
+            updateGlobalWishCount();
+            
+            if (currentView === 'wishlist') {
+                showWishlist(); // حذف فوري من الصفحة
+            } else {
+                const icon = document.getElementById(`wish-icon-${id}`);
+                if (icon) icon.className = wishlist.includes(id) ? 'bi bi-bookmark-heart-fill' : 'bi bi-bookmark-heart';
+            }
+        }
+
+        function updateGlobalWishCount() {
+            const el = document.getElementById('global-wish-count');
+            if (el) {
+                el.innerText = wishlistNewCount;
+                el.style.display = wishlistNewCount > 0 ? 'flex' : 'none';
+            }
+        }
+
+        function showWishlist() {
+            currentView = 'wishlist';
+            wishlistNewCount = 0; // تصفير العداد عند الدخول
+            localStorage.setItem('wishlistNewCount', 0);
+            updateGlobalWishCount();
+            
+            document.querySelectorAll('.bottom-bar-item').forEach(i => i.classList.remove('active'));
+            document.getElementById('wishlist-tab').classList.add('active');
+            
+            const filtered = window.fullData.filter(b => wishlist.includes(b.id));
+            renderBooksList(filtered);
+        }
+
+        function showHome() {
+            currentView = 'home';
+            document.querySelectorAll('.bottom-bar-item').forEach(i => i.classList.remove('active'));
+            document.getElementById('home-tab').classList.add('active');
+            renderBooksList(window.fullData);
+        }
+
         function openCart() {
             document.getElementById('cart-drawer').classList.add('open');
             document.getElementById('drawer-overlay').classList.add('open');
@@ -1210,6 +1294,7 @@
 
         function shopNow() {
             closeCart();
+            showHome();
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
 
