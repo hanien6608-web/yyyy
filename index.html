@@ -753,6 +753,70 @@
             color: var(--accent-wood);
         }
 
+        /* --- تنسيقات شات الدعم الفني الجديد --- */
+        .support-drawer {
+            position: fixed;
+            bottom: -100%;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 95%;
+            max-width: 450px;
+            height: 70vh;
+            background: var(--card-bg);
+            backdrop-filter: blur(40px);
+            z-index: 100000;
+            transition: 0.6s cubic-bezier(0.77, 0, 0.175, 1);
+            border-radius: 25px 25px 0 0;
+            border: 2px solid rgba(212, 163, 115, 0.4);
+            display: flex;
+            flex-direction: column;
+            padding: 20px;
+            box-shadow: 0 -15px 40px rgba(0,0,0,0.6);
+        }
+        .support-drawer.open { bottom: 0; }
+
+        .chat-body {
+            flex-grow: 1;
+            overflow-y: auto;
+            margin-bottom: 15px;
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            scrollbar-width: none;
+        }
+        .chat-body::-webkit-scrollbar { display: none; }
+
+        .msg {
+            padding: 12px 16px;
+            border-radius: 18px;
+            max-width: 85%;
+            font-size: 0.9rem;
+            line-height: 1.5;
+            animation: fadeInUp 0.3s ease;
+        }
+        .msg-bot { background: rgba(212, 163, 115, 0.15); align-self: flex-start; color: var(--paper-light); border-bottom-right-radius: 4px; }
+        .msg-user { background: var(--accent-wood); color: var(--wood-dark); align-self: flex-end; border-bottom-left-radius: 4px; font-weight: bold; }
+
+        .quick-actions {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+            padding: 0 5px;
+        }
+        .quick-btn {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--accent-wood);
+            color: var(--accent-wood);
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            cursor: pointer;
+            font-weight: bold;
+            transition: 0.3s;
+        }
+        .quick-btn:hover { background: var(--accent-wood); color: var(--wood-dark); }
+
         body.cart-open { overflow: hidden; }
 
         .order-form {
@@ -975,6 +1039,26 @@
 
             <button class="confirm-order-btn" onclick="confirmOrder()">تأكيد الطلب <i class="bi bi-bag-check-fill"></i></button>
             </div>
+        </div>
+    </div>
+
+    <!-- نافذة الدعم الفني (Chat Support) -->
+    <div id="support-drawer" class="support-drawer">
+        <div class="cart-header">
+            <h3>مركز الدعم <i class="bi bi-headset"></i></h3>
+            <span class="close-drawer" onclick="closeSupport()"><i class="bi bi-x-lg"></i></span>
+        </div>
+        <div class="chat-body" id="chat-body">
+            <div class="msg msg-bot">أهلاً بكِ في يوتوبيا لاند! ✨ كيف يمكننا مساعدتك اليوم؟ نحن هنا للرد على استفساراتك وشكاويكِ.</div>
+        </div>
+        <div class="quick-actions">
+            <button class="quick-btn" onclick="sendQuickMsg('الأوردر بتاعي لسه موصلش؟ 🚚')">الأوردر بتاعي لسه موصلش؟ 🚚</button>
+        </div>
+        <div class="input-group">
+            <input type="text" id="chat-input" placeholder="اكتبي استفسارك هنا...">
+            <button class="action-icon" style="position: absolute; left: 15px; right: auto; background: var(--accent-wood); color: var(--wood-dark);" onclick="sendMessage()">
+                <i class="bi bi-send-fill"></i>
+            </button>
         </div>
     </div>
 
@@ -1390,8 +1474,41 @@
             closeCart();
         }
 
+        // وظائف الدعم الفني الجديدة
         function showSupport() {
-            alert('💬 جاري فتح شات خدمة العملاء.. لحظة واحدة!');
+            document.getElementById('support-drawer').classList.add('open');
+            document.getElementById('drawer-overlay').classList.add('open');
+        }
+
+        function closeSupport() {
+            document.getElementById('support-drawer').classList.remove('open');
+            document.getElementById('drawer-overlay').classList.remove('open');
+        }
+
+        function sendQuickMsg(text) {
+            appendMessage(text, 'user');
+            setTimeout(() => {
+                appendMessage("أبشري، جاري مراجعة حالة طلبك.. من فضلكِ زودينا برقم الموبايل الذي تم تأكيد الطلب به لنتمكن من مساعدتكِ بشكل أسرع. 🌸", 'bot');
+            }, 1000);
+        }
+
+        function sendMessage() {
+            const input = document.getElementById('chat-input');
+            if (!input.value.trim()) return;
+            appendMessage(input.value, 'user');
+            input.value = '';
+            setTimeout(() => {
+                appendMessage("شكراً لتواصلكِ معنا، سيقوم أحد ممثلي خدمة العملاء بالرد عليكِ في أقرب وقت ممكن. ✨", 'bot');
+            }, 1200);
+        }
+
+        function appendMessage(text, side) {
+            const chatBody = document.getElementById('chat-body');
+            const msgDiv = document.createElement('div');
+            msgDiv.className = `msg msg-${side}`;
+            msgDiv.innerText = text;
+            chatBody.appendChild(msgDiv);
+            chatBody.scrollTop = chatBody.scrollHeight;
         }
     </script>
 </body>
