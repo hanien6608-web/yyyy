@@ -1055,9 +1055,9 @@
             <button class="quick-btn" onclick="sendQuickMsg('الأوردر بتاعي لسه موصلش؟ 🚚')">الأوردر بتاعي لسه موصلش؟ 🚚</button>
         </div>
         <div class="input-group">
-            <input type="text" id="chat-input" placeholder="اكتبي استفسارك هنا...">
-            <button class="action-icon" style="position: absolute; left: 15px; right: auto; background: var(--accent-wood); color: var(--wood-dark);" onclick="sendMessage()">
-                <i class="bi bi-send-fill"></i>
+            <input type="text" id="chat-input" placeholder="اكتبي استفسارك هنا..." style="padding-left: 70px;">
+            <button class="action-icon" style="position: absolute; left: 10px; right: auto; background: var(--accent-wood); color: var(--wood-dark); border: none; padding: 6px 15px; border-radius: 20px; font-weight: bold; font-size: 0.85rem; box-shadow: 0 4px 12px rgba(212, 163, 115, 0.3); cursor: pointer;" onclick="sendMessage()">
+                إرسال
             </button>
         </div>
     </div>
@@ -1131,6 +1131,9 @@
             updateGlobalWishCount(); // تحديث عداد المفضلة
             initTabs('.category-item');
             initTabs('.bottom-bar-item');
+            document.getElementById('chat-input').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') sendMessage();
+            });
         });
 
         async function getMyLibraryData() {
