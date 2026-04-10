@@ -118,6 +118,7 @@
             font-size: 1.1rem;
         }
 
+        /* إعادة تنسيق حاوية التصنيفات العلوية (القائمة الأفقية) */
         .categories-container {
             margin: 10px auto;
             width: 95%;
@@ -130,6 +131,7 @@
             overflow-x: auto;
             box-shadow: 0 10px 30px rgba(0,0,0,0.5);
             scrollbar-width: none;
+            z-index: 100;
         }
         .categories-container::-webkit-scrollbar { display: none; }
 
@@ -143,8 +145,6 @@
 
         .category-item {
             padding: 10px 22px;
-            background: rgba(0, 0, 0, 0.3);
-            border: 1px solid rgba(212, 163, 115, 0.1);
             border-radius: 12px;
             font-size: 0.85rem;
             color: var(--accent-wood);
@@ -158,8 +158,41 @@
             background: var(--accent-wood);
             color: var(--wood-dark);
             box-shadow: 0 0 15px rgba(212, 163, 115, 0.4);
-            border-color: transparent;
-            transform: translateY(-2px);
+        }
+
+        /* تنسيق المربع الصغير (Dropdown) للشريط السفلي */
+        .category-dropdown {
+            position: absolute;
+            bottom: 120%; /* يظهر فوق الزرار */
+            right: 0;
+            background: rgba(20, 15, 10, 0.95);
+            border: 1px solid var(--accent-wood);
+            border-radius: 15px;
+            width: 180px;
+            padding: 10px;
+            display: none;
+            flex-direction: column;
+            gap: 5px;
+            backdrop-filter: blur(20px);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.8);
+            z-index: 10000;
+        }
+
+        .category-dropdown.open { display: flex; animation: fadeInUp 0.3s ease; }
+
+        .dropdown-item {
+            padding: 10px 22px;
+            border-radius: 10px;
+            font-size: 0.85rem;
+            color: var(--accent-wood);
+            cursor: pointer;
+            font-weight: bold;
+            user-select: none;
+        }
+
+        .dropdown-item.active, .dropdown-item:hover {
+            background: var(--accent-wood);
+            color: var(--wood-dark);
         }
 
         .shelf-section {
@@ -963,7 +996,7 @@
 <body>
     <!-- الشريط العلوي الثابت (يظهر عند السكرول) -->
     <div id="sticky-header" class="sticky-top-header">
-        <div class="sticky-logo" onclick="showCategoriesAndHome(); window.scrollTo({top:0, behavior:'smooth'});" style="cursor:pointer;">يوتوبيا لاند</div>
+        <div class="sticky-logo" onclick="showCategoriesAndHome()" style="cursor:pointer;">يوتوبيا لاند</div>
         
         <div class="sticky-search-wrapper">
             <input type="text" id="sticky-search" class="sticky-search-input" placeholder="بحث سريع..." oninput="syncSearch(this.value)">
@@ -971,7 +1004,7 @@
         </div>
 
         <div class="sticky-actions">
-            <div class="action-icon" onclick="showCategoriesAndHome(); window.scrollTo({top:0, behavior:'smooth'});" style="width: 30px; height: 30px; font-size: 0.9rem;">
+            <div class="action-icon" onclick="showCategoriesAndHome()" style="width: 30px; height: 30px; font-size: 0.9rem;">
                 <i class="bi bi-house-door-fill"></i>
             </div>
             <div class="action-icon" onclick="openCart()" style="width: 30px; height: 30px; font-size: 0.9rem; position: relative;">
@@ -998,13 +1031,13 @@
             </header>
 
             <div class="categories-container">
-                <ul class="categories-list">
-                    <li class="category-item active">الكل</li>
-                    <li class="category-item">روايات</li>
-                    <li class="category-item">فانتزيا</li>
-                    <li class="category-item">تنمية ذاتية</li>
-                    <li class="category-item">ديني</li>
-                    <li class="category-item">رعب</li>
+                <ul class="categories-list" id="top-cat-list">
+                    <li class="category-item active" onclick="handleCategorySelect('الكل', this)">الكل</li>
+                    <li class="category-item" onclick="handleCategorySelect('روايات', this)">روايات</li>
+                    <li class="category-item" onclick="handleCategorySelect('فانتزيا', this)">فانتزيا</li>
+                    <li class="category-item" onclick="handleCategorySelect('تنمية ذاتية', this)">تنمية ذاتية</li>
+                    <li class="category-item" onclick="handleCategorySelect('ديني', this)">ديني</li>
+                    <li class="category-item" onclick="handleCategorySelect('رعب', this)">رعب</li>
                 </ul>
             </div>
 
@@ -1015,9 +1048,19 @@
             </main>
 
             <div class="bottom-bar">
-                <div class="bottom-bar-item active" id="categories-bottom-tab" onclick="showCategoriesAndHome()">
+                <div class="bottom-bar-item active" id="categories-bottom-tab" onclick="toggleBottomCats(event)" style="position: relative;">
                     <span class="bar-icon"><i class="bi bi-grid"></i></span>
                     <span>تصنيفات</span>
+                    
+                    <!-- المربع الصغير يفتح من هنا الآن -->
+                    <div class="category-dropdown" id="cat-dropdown-menu">
+                        <div class="dropdown-item active" onclick="handleCategorySelect('الكل', this)">الكل</div>
+                        <div class="dropdown-item" onclick="handleCategorySelect('روايات', this)">روايات</div>
+                        <div class="dropdown-item" onclick="handleCategorySelect('فانتزيا', this)">فانتزيا</div>
+                        <div class="dropdown-item" onclick="selectCategory('تنمية ذاتية', this)">تنمية ذاتية</div>
+                        <div class="dropdown-item" onclick="handleCategorySelect('ديني', this)">ديني</div>
+                        <div class="dropdown-item" onclick="handleCategorySelect('رعب', this)">رعب</div>
+                    </div>
                 </div>
                 <div class="bottom-bar-item" onclick="openCart()">
                     <span class="bar-icon">
@@ -1208,35 +1251,45 @@
             updateGlobalCartCount(); // تحديث عداد السلة عند تحميل الصفحة
             updateGlobalWishCount(); // تحديث عداد المفضلة
             
-            // تعريف وظيفة التبديل بين الأقسام (تصنيفات الكتب)
-            const categoryItems = document.querySelectorAll('.category-item');
-            categoryItems.forEach(item => {
-                item.addEventListener('click', function() {
-                    categoryItems.forEach(i => i.classList.remove('active'));
-                    this.classList.add('active');
-                    const category = this.innerText.trim();
-                    filterByCategory(category);
-                });
-            });
-            
             // مراقب السكرول للشريط العلوي
             window.addEventListener('scroll', () => {
                 const stickyHeader = document.getElementById('sticky-header');
-                const categories = document.querySelector('.categories-container');
-                if (!categories || !stickyHeader) return;
-                const rect = categories.getBoundingClientRect();
-                // إذا اختفى المربع تماماً من أعلى الشاشة (حافة المربع السفلية طلعت بره) يظهر الشريط
-                if (rect.bottom <= 0) {
+                const triggerArea = document.querySelector('.categories-container');
+                if (!triggerArea || !stickyHeader) return;
+                
+                const rect = triggerArea.getBoundingClientRect();
+                if (window.scrollY > 150 || rect.top <= 0) {
                     stickyHeader.classList.add('visible');
                 } else {
                     stickyHeader.classList.remove('visible');
                 }
             });
 
+            // إغلاق القائمة عند النقر في أي مكان آخر
+            document.addEventListener('click', () => {
+                const dropdown = document.getElementById('cat-dropdown-menu');
+                if(dropdown) dropdown.classList.remove('open');
+            });
+
             document.getElementById('chat-input').addEventListener('keypress', function(e) {
                 if (e.key === 'Enter') sendMessage();
             });
         });
+
+        // وظيفة فتح/إغلاق المربع الصغير من الشريط السفلي
+        function toggleBottomCats(e) {
+            e.stopPropagation();
+            document.getElementById('cat-dropdown-menu').classList.toggle('open');
+        }
+
+        // وظيفة موحدة لاختيار القسم (تعمل مع الشريط العلوي والمربع السفلي)
+        function handleCategorySelect(category, element) {
+            document.querySelectorAll('.category-item, .dropdown-item').forEach(i => i.classList.remove('active'));
+            // تفعيل العنصر المختار (سواء كان في القائمة أو المربع)
+            if(element) element.classList.add('active');
+            document.getElementById('cat-dropdown-menu').classList.remove('open');
+            filterByCategory(category);
+        }
 
         // وظيفة فلترة الكتب حسب القسم
         function filterByCategory(category) {
@@ -1265,9 +1318,23 @@
 
         function renderBooksList(data) {
             const container = document.getElementById('books-list');
-            container.innerHTML = data.length === 0 
-                ? `<div class="error-msg">الأرفف خالية! ضيفي كتب في سوبابيز أولاً.</div>`
-                : data.map((book, index) => renderBookCard(book, index)).join('');
+            
+            if (data.length === 0) {
+                if (currentView === 'wishlist') {
+                    container.innerHTML = `
+                        <div style="text-align:center; padding:80px 20px; color: var(--paper-light); grid-column: 1/-1;">
+                            <i class="bi bi-bookmark-heart" style="font-size: 4rem; color: var(--accent-wood); opacity: 0.3; margin-bottom: 20px; display: block;"></i>
+                            <h3 style="margin-bottom: 10px;">قائمة المفضلة فارغة</h3>
+                            <p style="opacity: 0.7; margin-bottom: 30px;">لم تقم بإضافة أي كتب لمفضلتك بعد.</p>
+                            <button class="shop-now-btn" onclick="shopNow()">اكتشف الآن <i class="bi bi-arrow-left-short"></i></button>
+                        </div>`;
+                } else {
+                    container.innerHTML = `<div class="error-msg">الأرفف خالية! ضيفي كتب في سوبابيز أولاً.</div>`;
+                }
+                return;
+            }
+
+            container.innerHTML = data.map((book, index) => renderBookCard(book, index)).join('');
             
             updateCartUI(); // لضمان ظهور علامات الصح
         }
@@ -1277,6 +1344,17 @@
             const isInWishlist = wishlist.includes(book.id);
             const lang = document.documentElement.lang || 'ar';
             const t = translations[lang];
+
+            // منطق الترجمة الذكي: إذا كانت اللغة إنجليزية، نبحث في قاموس الكتب
+            let displayTitle = book.title;
+            let displayAuthor = book.author;
+            let displayDesc = book.description || '';
+
+            if (lang === 'en' && t.bookData && t.bookData[book.id]) {
+                displayTitle = t.bookData[book.id].title || displayTitle;
+                displayAuthor = t.bookData[book.id].author || displayAuthor;
+                displayDesc = t.bookData[book.id].desc || displayDesc;
+            }
 
             return `
                 <div class="book-card" style="animation: fadeInUp ${0.3 + (index * 0.1)}s ease-out;">
@@ -1291,9 +1369,9 @@
                             <i id="wish-icon-${book.id}" class="bi ${isInWishlist ? 'bi-bookmark-heart-fill' : 'bi-bookmark-heart'}"></i>
                         </span>
                     </div>
-                    <h3>${lang === 'en' && book.title_en ? book.title_en : book.title}</h3>
-                    <p class="author-name">${t.by}: ${lang === 'en' && book.author_en ? book.author_en : book.author}</p>
-                    <p class="book-desc">${lang === 'en' && book.description_en ? book.description_en : (book.description || '')}</p>
+                    <h3>${displayTitle}</h3>
+                    <p class="author-name">${t.by}: ${displayAuthor}</p>
+                    <p class="book-desc">${displayDesc}</p>
                     <button class="cart-btn" id="add-btn-${book.id}" onclick="addItemToCart(${book.id})"><i class="bi bi-cart-plus"></i></button>
                     <div class="price-cart-container"><div class="price">${book.price} ${t.currency}</div></div>
                 </div>`;
@@ -1326,7 +1404,8 @@
                 categoriesBottomBar: "تصنيفات",
                 by: "تأليف",
                 currency: "ج.م",
-                dedicationText: "لكل من يجد ضالته بين الأسطر، لكل من يسافر دون أن يتحرك، ولكل عشاق الكتب.. هذا المكان لكم."
+                dedicationText: "لكل من يجد ضالته بين الأسطر، لكل من يسافر دون أن يتحرك، ولكل عشاق الكتب.. هذا المكان لكم.",
+                bookData: {} // العربي يستخدم البيانات الأصلية
             },
             en: {
                 logo: "Utopia Land",
@@ -1341,7 +1420,19 @@
                 categoriesBottomBar: "Categories",
                 by: "By",
                 currency: "EGP",
-                dedicationText: "For those who find themselves between the lines, for those who travel without moving, and for all book lovers.. this place is for you."
+                dedicationText: "For those who find themselves between the lines, for those who travel without moving, and for all book lovers.. this place is for you.",
+                // قاموس ترجمة الكتب (أضيفي كتبك هنا بناءً على الـ ID)
+                bookData: {
+                    1: { title: "Psychological Fragility", author: "Ismail Arafa", desc: "Discusses the phenomenon of psychological fragility." },
+                    2: { title: "Stockholm", author: "Ahmed Al-Hamdan", desc: "A mysterious journey between love and obsession." },
+                    3: { title: "Arses 1", author: "Ahmed Al-Hamdan", desc: "A fantasy epic blending magic and adventure." }
+                    // يمكن إضافة المزيد هنا...
+                    // أضيفي هنا ترجمة كل كتاب تريدين أن يظهر بالإنجليزية.
+                    // مثال:
+                    // 4: { title: "The Return of the Spirit", author: "Tawfiq al-Hakim", desc: "A classic symbolic novel depicting the renaissance of the Egyptian people." },
+                    // 5: { title: "Utopia", author: "Ahmed Khaled Tawfik", desc: "A dystopian novel imagining society divided into two classes." }
+                    // إذا لم يتم إضافة ترجمة لكتاب معين، سيظهر عنوانه ومؤلفه ووصفه باللغة العربية الأصلية.
+                }
             }
         };
 
@@ -1368,10 +1459,11 @@
             document.getElementById('sticky-search').placeholder = t.quickSearch;
 
             // ترجمة الأقسام (التصنيفات)
-            const catItems = document.querySelectorAll('.category-item');
+            const catItems = document.querySelectorAll('.dropdown-item');
             t.categories.forEach((name, i) => {
                 if(catItems[i]) catItems[i].innerText = name;
             });
+            document.getElementById('current-cat-text').innerText = html.lang === 'en' ? 'Browse Categories' : 'تصفح الأقسام';
 
             // ترجمة نصوص الشريط السفلي
             const barItems = document.querySelectorAll('.bottom-bar-item span:last-child');
@@ -1569,6 +1661,7 @@
             localStorage.setItem('wishlistNewCount', 0);
             updateGlobalWishCount();
             
+            window.scrollTo({ top: 0, behavior: 'smooth' });
             document.querySelectorAll('.bottom-bar-item').forEach(i => i.classList.remove('active'));
             document.getElementById('wishlist-tab').classList.add('active');
             
@@ -1578,6 +1671,10 @@
 
         function showHome() {
             currentView = 'home';
+            // مسح محتوى البحث عند العودة للرئيسية
+            document.getElementById('main-search').value = '';
+            document.getElementById('sticky-search').value = '';
+
             document.querySelectorAll('.bottom-bar-item').forEach(i => i.classList.remove('active'));
             document.getElementById('home-tab').classList.add('active');
             renderBooksList(window.fullData);
@@ -1597,9 +1694,7 @@
         }
 
         function shopNow() {
-            closeCart();
             showCategoriesAndHome();
-            window.scrollTo({ top: 0, behavior: 'smooth' });
         }
 
         // وظيفة ملء قائمة المحافظات المنسدلة
