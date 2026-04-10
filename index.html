@@ -34,7 +34,6 @@
             font-family: 'Cairo', sans-serif;
             background-color: #000;
             color: var(--text-main);
-            direction: rtl;
             overflow-x: hidden;
         }
 
@@ -753,6 +752,64 @@
             color: var(--accent-wood);
         }
 
+        /* --- تنسيقات الشريط العلوي الثابت الجديد --- */
+        .sticky-top-header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            background: rgba(20, 15, 10, 0.85);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid rgba(212, 163, 115, 0.3);
+            z-index: 10001;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 8px 5%;
+            transform: translateY(-100%);
+            transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            box-shadow: 0 5px 20px rgba(0,0,0,0.5);
+        }
+        .sticky-top-header.visible { transform: translateY(0); }
+
+        .sticky-logo {
+            font-size: 1.1rem;
+            font-weight: bold;
+            color: var(--accent-wood);
+            white-space: nowrap;
+        }
+
+        .sticky-search-wrapper {
+            flex: 1;
+            max-width: 180px;
+            margin: 0 15px;
+            position: relative;
+        }
+        .sticky-search-input {
+            width: 100%;
+            padding: 6px 30px 6px 10px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(212, 163, 115, 0.3);
+            border-radius: 20px;
+            color: var(--paper-light);
+            font-size: 0.8rem;
+            outline: none;
+        }
+        .sticky-search-icon { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); font-size: 0.8rem; color: var(--accent-wood); }
+
+        .sticky-actions { display: flex; align-items: center; gap: 15px; }
+        .lang-btn {
+            background: none;
+            border: 1px solid var(--accent-wood);
+            color: var(--accent-wood);
+            padding: 2px 8px;
+            border-radius: 5px;
+            font-size: 0.75rem;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        .lang-btn:hover { background: var(--accent-wood); color: var(--wood-dark); }
+
         /* --- تنسيقات شات الدعم الفني الجديد --- */
         .support-drawer {
             position: fixed;
@@ -904,16 +961,37 @@
     </style>
 </head>
 <body>
+    <!-- الشريط العلوي الثابت (يظهر عند السكرول) -->
+    <div id="sticky-header" class="sticky-top-header">
+        <div class="sticky-logo" onclick="showCategoriesAndHome(); window.scrollTo({top:0, behavior:'smooth'});" style="cursor:pointer;">يوتوبيا لاند</div>
+        
+        <div class="sticky-search-wrapper">
+            <input type="text" id="sticky-search" class="sticky-search-input" placeholder="بحث سريع..." oninput="syncSearch(this.value)">
+            <span class="sticky-search-icon"><i class="bi bi-search"></i></span>
+        </div>
+
+        <div class="sticky-actions">
+            <div class="action-icon" onclick="showCategoriesAndHome(); window.scrollTo({top:0, behavior:'smooth'});" style="width: 30px; height: 30px; font-size: 0.9rem;">
+                <i class="bi bi-house-door-fill"></i>
+            </div>
+            <div class="action-icon" onclick="openCart()" style="width: 30px; height: 30px; font-size: 0.9rem; position: relative;">
+                <i class="bi bi-cart3"></i>
+                <span id="sticky-cart-count" class="global-cart-badge" style="font-size: 0.6rem; min-width: 14px; height: 14px;">0</span>
+            </div>
+            <button id="lang-toggle" class="lang-btn" onclick="toggleLanguage()">EN</button>
+        </div>
+    </div>
+
     <div class="page-wrapper">
         <div class="main-content">
             <header>
                 <div class="top-nav">
-                    <div class="logo">يوتوبيا لاند</div>
+                    <div class="logo" onclick="showCategoriesAndHome()">يوتوبيا لاند</div>
                 </div>
                 
                 <div class="search-container">
                     <div class="search-input-wrapper">
-                        <input type="text" class="search-input" placeholder="ابحث عن عنوان أو كاتب...">
+                        <input type="text" id="main-search" class="search-input" placeholder="ابحث عن عنوان أو كاتب..." oninput="syncSearch(this.value)">
                         <span class="search-icon"><i class="bi bi-search"></i></span>
                     </div>
                 </div>
@@ -937,9 +1015,9 @@
             </main>
 
             <div class="bottom-bar">
-                <div class="bottom-bar-item active" id="home-tab" onclick="showHome()">
-                    <span class="bar-icon"><i class="bi bi-house-door"></i></span>
-                    <span>الرئيسية</span>
+                <div class="bottom-bar-item active" id="categories-bottom-tab" onclick="showCategoriesAndHome()">
+                    <span class="bar-icon"><i class="bi bi-grid"></i></span>
+                    <span>تصنيفات</span>
                 </div>
                 <div class="bottom-bar-item" onclick="openCart()">
                     <span class="bar-icon">
@@ -1129,12 +1207,46 @@
             populateProvinces(); // ملء قائمة المحافظات عند تحميل الصفحة
             updateGlobalCartCount(); // تحديث عداد السلة عند تحميل الصفحة
             updateGlobalWishCount(); // تحديث عداد المفضلة
-            initTabs('.category-item');
-            initTabs('.bottom-bar-item');
+            
+            // تعريف وظيفة التبديل بين الأقسام (تصنيفات الكتب)
+            const categoryItems = document.querySelectorAll('.category-item');
+            categoryItems.forEach(item => {
+                item.addEventListener('click', function() {
+                    categoryItems.forEach(i => i.classList.remove('active'));
+                    this.classList.add('active');
+                    const category = this.innerText.trim();
+                    filterByCategory(category);
+                });
+            });
+            
+            // مراقب السكرول للشريط العلوي
+            window.addEventListener('scroll', () => {
+                const stickyHeader = document.getElementById('sticky-header');
+                const categories = document.querySelector('.categories-container');
+                if (!categories || !stickyHeader) return;
+                const rect = categories.getBoundingClientRect();
+                // إذا اختفى المربع تماماً من أعلى الشاشة (حافة المربع السفلية طلعت بره) يظهر الشريط
+                if (rect.bottom <= 0) {
+                    stickyHeader.classList.add('visible');
+                } else {
+                    stickyHeader.classList.remove('visible');
+                }
+            });
+
             document.getElementById('chat-input').addEventListener('keypress', function(e) {
                 if (e.key === 'Enter') sendMessage();
             });
         });
+
+        // وظيفة فلترة الكتب حسب القسم
+        function filterByCategory(category) {
+            if (category === 'الكل') {
+                renderBooksList(window.fullData);
+            } else {
+                const filtered = window.fullData.filter(book => book.category === category);
+                renderBooksList(filtered);
+            }
+        }
 
         async function getMyLibraryData() {
             window.fullData = [];
@@ -1163,6 +1275,9 @@
         function renderBookCard(book, index) {
             const has2nd = book.image_url2 && book.image_url2 !== book.image_url;
             const isInWishlist = wishlist.includes(book.id);
+            const lang = document.documentElement.lang || 'ar';
+            const t = translations[lang];
+
             return `
                 <div class="book-card" style="animation: fadeInUp ${0.3 + (index * 0.1)}s ease-out;">
                     <div class="image-box">
@@ -1176,12 +1291,108 @@
                             <i id="wish-icon-${book.id}" class="bi ${isInWishlist ? 'bi-bookmark-heart-fill' : 'bi-bookmark-heart'}"></i>
                         </span>
                     </div>
-                    <h3>${book.title}</h3>
-                    <p class="author-name">تأليف: ${book.author}</p>
-                    <p class="book-desc">${book.description || ''}</p>
+                    <h3>${lang === 'en' && book.title_en ? book.title_en : book.title}</h3>
+                    <p class="author-name">${t.by}: ${lang === 'en' && book.author_en ? book.author_en : book.author}</p>
+                    <p class="book-desc">${lang === 'en' && book.description_en ? book.description_en : (book.description || '')}</p>
                     <button class="cart-btn" id="add-btn-${book.id}" onclick="addItemToCart(${book.id})"><i class="bi bi-cart-plus"></i></button>
-                    <div class="price-cart-container"><div class="price">${book.price} ج.م</div></div>
+                    <div class="price-cart-container"><div class="price">${book.price} ${t.currency}</div></div>
                 </div>`;
+        }
+
+        // وظيفة مزامنة البحث بين الشريطين والفلترة
+        function syncSearch(val) {
+            document.getElementById('main-search').value = val;
+            document.getElementById('sticky-search').value = val;
+            
+            const filtered = window.fullData.filter(book => 
+                book.title.toLowerCase().includes(val.toLowerCase()) || 
+                book.author.toLowerCase().includes(val.toLowerCase())
+            );
+            renderBooksList(filtered);
+        }
+
+        // قاموس الترجمة للموقع لجعله يعمل بشكل كامل
+        const translations = {
+            ar: {
+                logo: "يوتوبيا لاند",
+                search: "ابحث عن عنوان أو كاتب...",
+                quickSearch: "بحث سريع...",
+                categories: ["الكل", "روايات", "فانتزيا", "تنمية ذاتية", "ديني", "رعب"],
+                home: "الرئيسية",
+                cart: "السلة",
+                wishlist: "المفضلة",
+                support: "الدعم",
+                dedication: "إهداء خاص",
+                categoriesBottomBar: "تصنيفات",
+                by: "تأليف",
+                currency: "ج.م",
+                dedicationText: "لكل من يجد ضالته بين الأسطر، لكل من يسافر دون أن يتحرك، ولكل عشاق الكتب.. هذا المكان لكم."
+            },
+            en: {
+                logo: "Utopia Land",
+                search: "Search for title or author...",
+                quickSearch: "Quick search...",
+                categories: ["All", "Novels", "Fantasy", "Self-Dev", "Religious", "Horror"],
+                home: "Home",
+                cart: "Cart",
+                wishlist: "Wishlist",
+                support: "Support",
+                dedication: "Special Dedication",
+                categoriesBottomBar: "Categories",
+                by: "By",
+                currency: "EGP",
+                dedicationText: "For those who find themselves between the lines, for those who travel without moving, and for all book lovers.. this place is for you."
+            }
+        };
+
+        // وظيفة تبديل اللغة (تجريبية)
+        function toggleLanguage() {
+            const html = document.documentElement;
+            const langBtn = document.getElementById('lang-toggle');
+            const isAr = html.dir === "rtl";
+            const newLang = isAr ? "en" : "ar";
+            const t = translations[newLang];
+
+            // تغيير الاتجاه واللغة في الصفحة
+            html.dir = isAr ? "ltr" : "rtl";
+            html.lang = newLang;
+            langBtn.innerText = isAr ? "AR" : "EN";
+
+            // ترجمة اللوجو في كل مكان
+            document.querySelectorAll('.logo, .sticky-logo').forEach(el => {
+                el.innerText = t.logo;
+            });
+            
+            // ترجمة نصوص البحث (Placeholder)
+            document.getElementById('main-search').placeholder = t.search;
+            document.getElementById('sticky-search').placeholder = t.quickSearch;
+
+            // ترجمة الأقسام (التصنيفات)
+            const catItems = document.querySelectorAll('.category-item');
+            t.categories.forEach((name, i) => {
+                if(catItems[i]) catItems[i].innerText = name;
+            });
+
+            // ترجمة نصوص الشريط السفلي
+            const barItems = document.querySelectorAll('.bottom-bar-item span:last-child');
+            const barTexts = [t.categoriesBottomBar, t.cart, t.wishlist, t.support];
+            barTexts.forEach((text, i) => {
+                if(barItems[i]) barItems[i].innerText = text;
+            });
+
+            // ترجمة صندوق الإهداء
+            const dedicationH3 = document.querySelector('.dedication-box h3');
+            if(dedicationH3) dedicationH3.innerHTML = `${t.dedication} <i class="bi bi-feather"></i>`;
+            
+            const dedicationP = document.querySelector('.dedication-box p');
+            if(dedicationP) dedicationP.innerText = t.dedicationText;
+
+            // أهم خطوة: إعادة رسم الكتب باللغة الجديدة
+            const currentData = (currentView === 'wishlist') 
+                ? window.fullData.filter(b => wishlist.includes(b.id))
+                : window.fullData;
+            
+            renderBooksList(currentData);
         }
 
         function addItemToCart(id) {
@@ -1310,10 +1521,16 @@
 
         function updateGlobalCartCount() {
             const globalCountElement = document.getElementById('global-cart-count');
+            const stickyCountElement = document.getElementById('sticky-cart-count');
             const totalQty = cart.reduce((acc, item) => acc + item.qty, 0);
+            
             if (globalCountElement) {
                 globalCountElement.innerText = totalQty;
                 globalCountElement.style.display = totalQty > 0 ? 'flex' : 'none'; // إظهار أو إخفاء العداد
+            }
+            if (stickyCountElement) {
+                stickyCountElement.innerText = totalQty;
+                stickyCountElement.style.display = totalQty > 0 ? 'flex' : 'none';
             }
         }
 
@@ -1381,7 +1598,7 @@
 
         function shopNow() {
             closeCart();
-            showHome();
+            showCategoriesAndHome();
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
 
