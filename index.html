@@ -1057,7 +1057,7 @@
                         <div class="dropdown-item active" onclick="handleCategorySelect('الكل', this)">الكل</div>
                         <div class="dropdown-item" onclick="handleCategorySelect('روايات', this)">روايات</div>
                         <div class="dropdown-item" onclick="handleCategorySelect('فانتزيا', this)">فانتزيا</div>
-                        <div class="dropdown-item" onclick="selectCategory('تنمية ذاتية', this)">تنمية ذاتية</div>
+                    <div class="dropdown-item" onclick="handleCategorySelect('تنمية ذاتية', this)">تنمية ذاتية</div>
                         <div class="dropdown-item" onclick="handleCategorySelect('ديني', this)">ديني</div>
                         <div class="dropdown-item" onclick="handleCategorySelect('رعب', this)">رعب</div>
                     </div>
@@ -1284,10 +1284,35 @@
 
         // وظيفة موحدة لاختيار القسم (تعمل مع الشريط العلوي والمربع السفلي)
         function handleCategorySelect(category, element) {
-            document.querySelectorAll('.category-item, .dropdown-item').forEach(i => i.classList.remove('active'));
-            // تفعيل العنصر المختار (سواء كان في القائمة أو المربع)
-            if(element) element.classList.add('active');
-            document.getElementById('cat-dropdown-menu').classList.remove('open');
+            // 1. إخفاء المربع السفلي فوراً
+            const dropdown = document.getElementById('cat-dropdown-menu');
+            if(dropdown) dropdown.classList.remove('open');
+
+            const topItems = document.querySelectorAll('.category-item');
+            const bottomItems = document.querySelectorAll('.dropdown-item');
+
+            // 2. إزالة حالة النشاط من جميع العناصر في الموقع
+            topItems.forEach(i => i.classList.remove('active'));
+            bottomItems.forEach(i => i.classList.remove('active'));
+
+            // 3. تحديد الـ Index للمزامنة بين القائمتين
+            let targetIdx = -1;
+            if (element.classList.contains('category-item')) {
+                targetIdx = Array.from(topItems).indexOf(element);
+            } else {
+                targetIdx = Array.from(bottomItems).indexOf(element);
+            }
+
+            // 4. تفعيل (إنارة) العناصر المقابلة في كلا الشريطين
+            if (targetIdx !== -1) {
+                if (topItems[targetIdx]) {
+                    topItems[targetIdx].classList.add('active');
+                    // سحر الحركة: جعل الشريط العلوي يتحرك ليظهر القسم المختار في المنتصف
+                    topItems[targetIdx].scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+                }
+                if (bottomItems[targetIdx]) bottomItems[targetIdx].classList.add('active');
+            }
+
             filterByCategory(category);
         }
 
@@ -1458,12 +1483,14 @@
             document.getElementById('main-search').placeholder = t.search;
             document.getElementById('sticky-search').placeholder = t.quickSearch;
 
-            // ترجمة الأقسام (التصنيفات)
-            const catItems = document.querySelectorAll('.dropdown-item');
+            // ترجمة الأقسام (التصنيفات) في الشريط العلوي والمربع السفلي معاً
+            const topCatItems = document.querySelectorAll('.category-item');
+            const bottomCatItems = document.querySelectorAll('.dropdown-item');
+            
             t.categories.forEach((name, i) => {
-                if(catItems[i]) catItems[i].innerText = name;
+                if(topCatItems[i]) topCatItems[i].innerText = name;
+                if(bottomCatItems[i]) bottomCatItems[i].innerText = name;
             });
-            document.getElementById('current-cat-text').innerText = html.lang === 'en' ? 'Browse Categories' : 'تصفح الأقسام';
 
             // ترجمة نصوص الشريط السفلي
             const barItems = document.querySelectorAll('.bottom-bar-item span:last-child');
