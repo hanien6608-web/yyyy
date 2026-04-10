@@ -473,6 +473,7 @@
             cursor: pointer;
             font-size: 0.75rem;
             opacity: 0.7;
+            position: relative; /* لجعل العداد يظهر بشكل صحيح */
         }
 
         .bottom-bar-item:hover {
@@ -500,10 +501,33 @@
             align-items: center;
             justify-content: center;
             border-radius: 50%;
+            position: relative; /* لجعل العداد يتربط بدائرة الأيقونة */
             background: rgba(0, 0, 0, 0.4);
             border: 1px solid rgba(255, 255, 255, 0.1);
             font-size: 1.2rem;
             color: var(--accent-wood);
+        }
+
+        /* تنسيق عداد السلة العالمي */
+        .global-cart-badge {
+            position: absolute;
+            top: 0;
+            right: 0;
+            background: var(--accent-wood); /* لون ذهبي فخم */
+            color: var(--wood-dark); /* لون نص داكن لتباين واضح */
+            font-size: 0.75rem; 
+            font-weight: 900; /* سميك جداً */
+            border-radius: 50%;
+            min-width: 18px; 
+            height: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 2px;
+            transform: translate(35%, -35%); /* سحر الإزاحة: نصه بره ونصه جوه */
+            box-shadow: 0 0 8px rgba(212, 163, 115, 0.5); /* توهج ذهبي خفيف */
+            border: 1px solid var(--paper-light); /* حدود خفيفة لتحديد الشكل */
+            display: none; /* مخفي افتراضياً، يظهر فقط عند وجود كتب */
         }
 
         .cart-drawer {
@@ -832,7 +856,10 @@
                     <span>الرئيسية</span>
                 </div>
                 <div class="bottom-bar-item" onclick="openCart()">
-                    <span class="bar-icon"><i class="bi bi-cart3"></i></span>
+                    <span class="bar-icon">
+                        <i class="bi bi-cart3"></i>
+                        <span id="global-cart-count" class="global-cart-badge">0</span>
+                    </span>
                     <span>السلة</span>
                 </div>
                 <div class="bottom-bar-item">
@@ -932,6 +959,16 @@
         const _supabase = supabase.createClient(supabaseUrl, supabaseKey);
 
         let cart = []; // مصفوفة لتخزين عناصر السلة
+        // حاول تحميل السلة من LocalStorage عند بدء التشغيل
+        try {
+            const storedCart = localStorage.getItem('cart');
+            if (storedCart) {
+                cart = JSON.parse(storedCart);
+            }
+        } catch (e) {
+            console.error("Failed to load cart from localStorage:", e);
+            cart = []; // في حالة وجود خطأ، ابدأ بسلة فارغة
+        }
         let shippingCost = 0; // تكلفة الشحن الافتراضية
 
         // قائمة المحافظات وأسعار الشحن
@@ -974,7 +1011,13 @@
             "سفاجة": 120
         };
 
-        document.addEventListener('DOMContentLoaded', getMyLibraryData);
+        document.addEventListener('DOMContentLoaded', () => {
+            getMyLibraryData();
+            populateProvinces(); // ملء قائمة المحافظات عند تحميل الصفحة
+            updateGlobalCartCount(); // تحديث عداد السلة عند تحميل الصفحة
+            initTabs('.category-item');
+            initTabs('.bottom-bar-item');
+        });
 
         async function getMyLibraryData() {
             window.fullData = [];
@@ -1031,6 +1074,7 @@
             }
             
             updateCartUI();
+            saveCartToLocalStorage(); // حفظ السلة بعد الإضافة
             setTimeout(openCart, 600);
         }
 
@@ -1059,6 +1103,7 @@
                 });
             }
 
+            updateGlobalCartCount(); // تحديث عداد السلة العالمي
             if (cart.length === 0) {
                 container.innerHTML = `
                     <div style="text-align:center; padding:80px 20px; color: var(--paper-light); display: flex; flex-direction: column; align-items: center; justify-content: center;">
@@ -1126,13 +1171,28 @@
                 deleteFromCart(idx);
             } else {
                 updateCartUI();
+                saveCartToLocalStorage(); // حفظ السلة بعد تغيير الكمية
             }
         }
 
         function deleteFromCart(idx) {
             cart.splice(idx, 1);
             updateCartUI();
+            saveCartToLocalStorage(); // حفظ السلة بعد الحذف
             if (cart.length === 0) closeCart(); // إغلاق السلة إذا أصبحت فارغة
+        }
+
+        function saveCartToLocalStorage() {
+            localStorage.setItem('cart', JSON.stringify(cart));
+        }
+
+        function updateGlobalCartCount() {
+            const globalCountElement = document.getElementById('global-cart-count');
+            const totalQty = cart.reduce((acc, item) => acc + item.qty, 0);
+            if (globalCountElement) {
+                globalCountElement.innerText = totalQty;
+                globalCountElement.style.display = totalQty > 0 ? 'flex' : 'none'; // إظهار أو إخفاء العداد
+            }
         }
 
         function openCart() {
@@ -1241,25 +1301,13 @@
             // مسح السلة بعد تأكيد الطلب
             cart = [];
             updateCartUI();
+            saveCartToLocalStorage(); // حفظ السلة بعد مسحها
             closeCart();
         }
 
         function showSupport() {
             alert('💬 جاري فتح شات خدمة العملاء.. لحظة واحدة!');
         }
-
-        function initTabs(selector) {
-            const items = document.querySelectorAll(selector);
-            items.forEach(item => {
-                item.addEventListener('click', function() {
-                    items.forEach(i => i.classList.remove('active'));
-                    this.classList.add('active');
-                });
-            });
-        }
-        populateProvinces(); // ملء قائمة المحافظات عند تحميل الصفحة
-        initTabs('.category-item');
-        initTabs('.bottom-bar-item');
     </script>
 </body>
 </html>
