@@ -504,11 +504,11 @@
         .wish-btn-large {
             width: 45px;
             height: 45px;
-            background: rgba(0, 0, 0, 0.5); /* اللون الافتراضي داكن */
+            background: rgba(0, 0, 0, 0.4); /* توحيد الخلفية */
             border: 1px solid var(--accent-wood);
             border-radius: 50%; /* جعل زر المفضلة دائرياً ليناغم الستايل الجديد */
             color: var(--accent-wood);
-            font-size: 1.4rem;
+            font-size: 1.2rem; /* توحيد مقاس الأيقونة */
             cursor: pointer;
             display: flex;
             align-items: center;
@@ -521,7 +521,7 @@
         .wish-btn-large.active {
             background: var(--accent-wood);
             color: var(--wood-dark);
-            box-shadow: 0 0 20px var(--accent-wood);
+            box-shadow: 0 0 15px rgba(212, 163, 115, 0.4); /* توحيد الإضاءة */
         }
         .wish-btn-large:hover { transform: scale(1.1); }
 
@@ -540,7 +540,7 @@
         .action-icon {
             width: 35px;
             height: 35px;
-            background: rgba(0, 0, 0, 0.6);
+            background: rgba(0, 0, 0, 0.4); /* توحيد الخلفية مع البار السفلي */
             border-radius: 50%;
             display: flex;
             justify-content: center;
@@ -558,13 +558,13 @@
         .action-icon.active {
             background: var(--accent-wood);
             color: var(--wood-dark);
-            box-shadow: 0 0 15px var(--accent-wood);
+            box-shadow: 0 0 15px rgba(212, 163, 115, 0.4); /* توحيد إعدادات الإضاءة مع البار */
         }
 
         .action-icon:hover {
             background: var(--accent-wood);
             color: var(--wood-dark);
-            transform: scale(1.1) rotate(10deg);
+            transform: scale(1.1); /* إزالة الدوران ليتطابق مع البار */
         }
 
         .author-name {
@@ -1214,6 +1214,18 @@
             box-shadow: 0 15px 40px rgba(212, 163, 115, 0.4);
         }
 
+        /* ستايل زر التفاصيل عند النجاح (علامة الصح) - يطابق السلة تماماً */
+        .shop-now-btn.success {
+            background: var(--accent-wood) !important;
+            color: var(--wood-dark) !important;
+            box-shadow: 0 0 25px rgba(212, 163, 115, 0.6);
+            transform: scale(1.05);
+        }
+        .shop-now-btn.success i {
+            font-size: 1.6rem;
+            -webkit-text-stroke: 1.8px var(--wood-dark);
+        }
+
         .loading-msg, .error-msg {
             /* رسائل التحميل والخطأ تأخذ عرض الشبكة بالكامل */
             grid-column: 1 / -1;
@@ -1242,11 +1254,6 @@
         <div class="sticky-actions">
             <div class="action-icon" onclick="showCategoriesAndHome()" style="width: 30px; height: 30px; font-size: 0.9rem;">
                 <i class="bi bi-house-door-fill"></i>
-            </div>
-            <!-- إضافة أيقونة المفضلة للشريط العلوي لسهولة الوصول -->
-            <div class="action-icon" onclick="showWishlist()" style="width: 30px; height: 30px; font-size: 0.9rem; position: relative;">
-                <i class="bi bi-bookmark-heart-fill"></i>
-                <span id="sticky-wish-count" class="global-wish-badge" style="font-size: 0.6rem; min-width: 14px; height: 14px;">0</span>
             </div>
             <div class="action-icon" onclick="openCart()" style="width: 30px; height: 30px; font-size: 0.9rem; position: relative;">
                 <i class="bi bi-cart3"></i>
@@ -1286,6 +1293,7 @@
             <div class="categories-container">
                 <ul class="categories-list" id="top-cat-list">
                     <li class="category-item active" onclick="handleCategorySelect('الكل', this)">الكل</li>
+                    <li class="category-item" onclick="handleCategorySelect('العروض', this)">العروض</li>
                     <li class="category-item" onclick="handleCategorySelect('روايات', this)">روايات</li>
                     <li class="category-item" onclick="handleCategorySelect('فانتازيا', this)">فانتازيا</li>
                     <li class="category-item" onclick="handleCategorySelect('تنمية ذاتية', this)">تنمية ذاتية</li>
@@ -1308,6 +1316,7 @@
                     <!-- المربع الصغير يفتح من هنا الآن -->
                     <div class="category-dropdown" id="cat-dropdown-menu">
                         <div class="dropdown-item active" onclick="handleCategorySelect('الكل', this)">الكل</div>
+                        <div class="dropdown-item" onclick="handleCategorySelect('العروض', this)">العروض</div>
                         <div class="dropdown-item" onclick="handleCategorySelect('روايات', this)">روايات</div>
                         <div class="dropdown-item" onclick="handleCategorySelect('فانتازيا', this)">فانتازيا</div>
                     <div class="dropdown-item" onclick="handleCategorySelect('تنمية ذاتية', this)">تنمية ذاتية</div>
@@ -1616,7 +1625,17 @@
                             <button class="shop-now-btn" onclick="shopNow()">اكتشف الآن <i class="bi bi-arrow-left-short"></i></button>
                         </div>`;
                 } else {
-                    container.innerHTML = `<div class="error-msg">الأرفف خالية! ضيفي كتب في سوبابيز أولاً.</div>`;
+                    const activeCat = document.querySelector('.category-item.active')?.innerText || 'الكل';
+                    const isOffers = activeCat === 'العروض' || activeCat === 'Offers';
+                    if (isOffers) {
+                         const msg = document.documentElement.lang === 'en' ? 'No offers available currently.. stay tuned! ✨' : 'لا توجد عروض حالياً.. انتظرونا قريباً! ✨';
+                         container.innerHTML = `<div class="error-msg" style="padding: 100px 20px;">
+                            <i class="bi bi-percent" style="font-size: 3.5rem; display: block; margin-bottom: 15px; color: var(--accent-wood);"></i>
+                            ${msg}
+                         </div>`;
+                    } else {
+                         container.innerHTML = `<div class="error-msg">الأرفف خالية! ضيفي كتب في سوبابيز أولاً.</div>`;
+                    }
                 }
                 return;
             }
@@ -1627,7 +1646,16 @@
         }
 
         // وظيفة بناء HTML لكارت الكتاب الواحد
+        // وظيفة لضمان أن الرابط كامل وصحيح (تجنب توقف الكود)
+        function getValidImageUrl(url) {
+            if (!url) return 'https://via.placeholder.com/300x450?text=No+Image';
+            if (url.startsWith('http')) return url;
+            return `https://ywbmamklqyrahwqifqdj.supabase.co/storage/v1/object/public/books-images/${url}`;
+        }
+
         function renderBookCard(book, index) {
+            const img1 = getValidImageUrl(book.image_url);
+            const img2 = getValidImageUrl(book.image_url2);
             const has2nd = book.image_url2 && book.image_url2 !== book.image_url;
             const isInWishlist = wishlist.includes(book.id);
             const lang = document.documentElement.lang || 'ar';
@@ -1645,17 +1673,17 @@
             }
 
             return `
-                <div class="book-card" style="animation: fadeInUp ${0.3 + (index * 0.1)}s ease-out;" onclick="showBookDetails(${book.id})">
+                <div class="book-card" style="animation: fadeInUp ${0.3 + (index * 0.1)}s ease-out;" onclick="showBookDetails('${book.id}')">
                     <div class="image-box">
                         ${has2nd ? `<div class="hover-trigger trigger-right"></div><div class="hover-trigger trigger-left"></div>` : ''}
-                        <img src="${book.image_url}" class="main-img">
-                        ${has2nd ? `<img src="${book.image_url2}" class="hover-img">` : ''}
+                        <img src="${img1}" class="main-img">
+                        ${has2nd ? `<img src="${img2}" class="hover-img">` : ''}
                         <div class="image-indicators"><div class="dot active"></div>${has2nd ? `<div class="dot"></div>` : ''}</div>
                     </div>
                     <div class="book-actions"> <!-- أزرار المفضلة فوق الصورة -->
                         <span id="wish-btn-${book.id}" class="action-icon ${isInWishlist ? 'active' : ''}" title="المفضلة" 
                               onclick="event.stopPropagation(); toggleWishlist(${book.id})">
-                            <i id="wish-icon-${book.id}" class="bi ${isInWishlist ? 'bi-bookmark-heart-fill' : 'bi-bookmark-heart'}"></i>
+                            <i id="wish-icon-${book.id}" class="bi bi-bookmark-heart"></i> <!-- توحيد الشكل المفرغ -->
                         </span>
                     </div>
                     <h3>${displayTitle}</h3>
@@ -1664,28 +1692,69 @@
                     </div>
                     <p class="author-name">${t.by}: ${displayAuthor}</p>
                     <p class="book-desc">${displayDesc}</p>
-                    <button class="cart-btn" id="add-btn-${book.id}" onclick="addItemToCart(${book.id})"><i class="bi bi-cart-plus"></i></button>
+                    <!-- إضافة منع التداخل لزر السلة لكي لا يفتح الديتلز -->
+                    <button class="cart-btn" id="add-btn-${book.id}" data-id="${book.id}" onclick="event.stopPropagation(); addItemToCart('${book.id}')"><i class="bi bi-cart-plus"></i></button>
                     <div class="price-cart-container"><div class="price">${book.price} ${t.currency}</div></div>
                 </div>`;
         }
 
-        // وظيفة فتح صفحة تفاصيل الكتاب
+        // دوال مساعدة للأقسام السفلية (الأكثر مبيعاً والمقترحات)
+        function getRandomBooks(count) {
+            if (!window.fullData) return [];
+            return [...window.fullData].sort(() => 0.5 - Math.random()).slice(0, count);
+        }
+
+        function getRelatedBooks(currentBook) {
+            if (!window.fullData) return [];
+            return window.fullData.filter(b => 
+                b.category === currentBook.category && String(b.id) !== String(currentBook.id)
+            ).slice(0, 4);
+        }
+
+        function renderSmallCard(book) {
+            const lang = document.documentElement.lang || 'ar';
+            const t = translations[lang];
+            const img = getValidImageUrl(book.image_url);
+            const isInCart = cart.find(i => String(i.id) === String(book.id));
+            return `
+                <div class="book-card" style="padding: 8px; font-size: 0.8rem;" onclick="event.stopPropagation(); showBookDetails('${book.id}')">
+                    <div class="image-box" style="height: 120px;">
+                        <img src="${img}" style="object-fit: cover;">
+                    </div>
+                    <h3 style="font-size: 0.8rem; height: 35px; overflow: hidden;">${book.title}</h3>
+                    <div class="price" style="font-size: 0.9rem;">${book.price} ${t.currency}</div>
+                    <button class="cart-btn ${isInCart ? 'success' : ''}" data-id="${book.id}" style="width: 25px; height: 25px; font-size: 0.8rem; bottom: 8px; left: 8px;" onclick="event.stopPropagation(); addItemToCart('${book.id}')">
+                        <i class="bi ${isInCart ? 'bi-check-lg' : 'bi-cart-plus'}"></i>
+                    </button>
+                </div>
+            `;
+        }
+
+        // وظيفة فتح صفحة تفاصيل الكتاب (تم تصحيح تعريف المتغيرات)
         function showBookDetails(id) {
-            const book = window.fullData.find(b => b.id === id);
+            // البحث عن الكتاب مع التأكد من مطابقة الأنواع (String)
+            const book = window.fullData.find(b => String(b.id) === String(id));
             if (!book) return;
+            
+            window.currentOpenedBookId = book.id; 
 
             currentDetailsQty = 1; // إعادة ضبط الكمية عند فتح أي كتاب جديد
             const detailsPage = document.getElementById('book-details-page');
             const content = document.getElementById('details-content');
             const isInWishlist = wishlist.includes(book.id);
+            
+            // تعريف المتغيرات التي كانت تسبب خطأ (ReferenceError)
+            const isInCart = cart.find(i => String(i.id) === String(book.id));
+            const img1 = getValidImageUrl(book.image_url);
+            const img2 = getValidImageUrl(book.image_url2);
             const has2nd = book.image_url2 && book.image_url2 !== book.image_url;
 
             content.innerHTML = `
                 <div class="details-image">
                     <div class="details-image-container" id="details-img-container">
                         <div class="details-slider" id="details-slider">
-                            <img src="${book.image_url}" alt="${book.title}">
-                            ${has2nd ? `<img src="${book.image_url2}" alt="${book.title}">` : ''}
+                            <img src="${img1}" alt="${book.title}">
+                            ${has2nd ? `<img src="${img2}" alt="${book.title}">` : ''}
                         </div>
                         ${has2nd ? `
                         <!-- أسهم التنقل الاحترافية -->
@@ -1719,13 +1788,13 @@
                         </div>
 
                         <!-- زر الإضافة الاحترافي -->
-                        <button class="shop-now-btn" style="flex: 1; min-width: 200px;" onclick="addItemToCart(${book.id}, currentDetailsQty)">
-                            <i class="bi bi-cart-plus"></i> إضافة للسلة
+                        <button id="details-add-btn" class="shop-now-btn ${isInCart ? 'success' : ''}" style="flex: 1; min-width: 200px;" onclick="addItemToCart('${book.id}', currentDetailsQty)">
+                            ${isInCart ? '<i class="bi bi-check-lg"></i> تم الإضافة' : '<i class="bi bi-cart-plus"></i> إضافة للسلة'}
                         </button>
                         
                         <!-- زر المفضلة الكبير -->
                         <button id="details-wish-btn" class="wish-btn-large ${isInWishlist ? 'active' : ''}" onclick="toggleWishlist(${book.id}); updateDetailsWishBtn(${book.id})">
-                            <i id="details-wish-icon" class="bi ${isInWishlist ? 'bi-bookmark-heart-fill' : 'bi-bookmark-heart'}"></i> <!-- لوجو المفضلة فقط -->
+                            <i id="details-wish-icon" class="bi bi-bookmark-heart"></i> <!-- لوجو المفضلة الموحد -->
                         </button>
                     </div>
                 </div>
@@ -1793,15 +1862,18 @@
         function renderSmallCard(book) {
             const lang = document.documentElement.lang || 'ar';
             const t = translations[lang];
+            // التأكد من حالة السلة عند رندر الكروت الصغيرة لأول مرة
+            const isInCart = cart.find(i => String(i.id) === String(book.id));
             return `
-                <div class="book-card" style="padding: 8px; font-size: 0.8rem;" onclick="event.stopPropagation(); showBookDetails(${book.id})">
+                <div class="book-card" style="padding: 8px; font-size: 0.8rem;" onclick="event.stopPropagation(); showBookDetails('${book.id}')">
                     <div class="image-box" style="height: 120px;">
                         <img src="${book.image_url}" style="object-fit: cover;">
                     </div>
                     <h3 style="font-size: 0.8rem; height: 35px; overflow: hidden;">${book.title}</h3>
                     <div class="price" style="font-size: 0.9rem;">${book.price} ${t.currency}</div>
-                    <button class="cart-btn" style="width: 25px; height: 25px; font-size: 0.8rem; bottom: 8px; left: 8px;" onclick="event.stopPropagation(); addItemToCart(${book.id})">
-                        <i class="bi bi-cart-plus"></i>
+                    <!-- إضافة data-id والتحقق من علامة الصح لضمان التزامن -->
+                    <button class="cart-btn ${isInCart ? 'success' : ''}" data-id="${book.id}" style="width: 25px; height: 25px; font-size: 0.8rem; bottom: 8px; left: 8px;" onclick="event.stopPropagation(); addItemToCart('${book.id}')">
+                        <i class="bi ${isInCart ? 'bi-check-lg' : 'bi-cart-plus'}"></i>
                     </button>
                 </div>
             `;
@@ -1819,7 +1891,10 @@
             const detailsPage = document.getElementById('book-details-page');
             detailsPage.classList.remove('active');
             // الانتظار حتى ينتهي الانميشن قبل الإخفاء التام
-            setTimeout(() => detailsPage.style.display = 'none', 500);
+            setTimeout(() => {
+                detailsPage.style.display = 'none';
+                window.currentOpenedBookId = null; // تنظيف الـ ID عند الإغلاق
+            }, 500);
             document.body.style.overflow = 'auto';
         }
 
@@ -1829,7 +1904,7 @@
             const isActive = wishlist.includes(id);
             
             if (btn) btn.classList.toggle('active', isActive);
-            if (icon) icon.className = isActive ? 'bi bi-bookmark-heart-fill' : 'bi bi-bookmark-heart';
+            if (icon) icon.className = 'bi bi-bookmark-heart'; // الحفاظ على شكل اللوجو موحداً
         }
 
         // وظيفة توحيد الحروف العربية للبحث الذكي
@@ -1872,7 +1947,7 @@
                 logo: "يوتوبيا لاند",
                 search: "ابحث عن عنوان أو كاتب...",
                 quickSearch: "بحث سريع...",
-                categories: ["الكل", "روايات", "فانتازيا", "تنمية ذاتية", "ديني", "رعب"],
+                categories: ["الكل", "العروض", "روايات", "فانتازيا", "تنمية ذاتية", "ديني", "رعب"],
                 home: "الرئيسية",
                 cart: "السلة",
                 wishlist: "المفضلة",
@@ -1888,7 +1963,7 @@
                 logo: "Utopia Land",
                 search: "Search for title or author...",
                 quickSearch: "Quick search...",
-                categories: ["All", "Novels", "Fantasy", "Self-Dev", "Religious", "Horror"],
+                categories: ["All", "Offers", "Novels", "Fantasy", "Self-Dev", "Religious", "Horror"],
                 home: "Home",
                 cart: "Cart",
                 wishlist: "Wishlist",
@@ -1972,8 +2047,8 @@
 
         // وظيفة إضافة كتاب للسلة (محدثة لتدعم الكمية المخصصة)
         function addItemToCart(id, customQty = 1) {
-            const book = window.fullData.find(b => b.id === id);
-            const inCart = cart.find(i => i.id === id);
+            const book = window.fullData.find(b => String(b.id) === String(id));
+            const inCart = cart.find(i => String(i.id) === String(id));
             
             if (inCart) {
                 inCart.qty += customQty;
@@ -1990,7 +2065,7 @@
         function updateCartUI() {
             const container = document.getElementById('cart-items-container');
             const totalVal = document.getElementById('total-val');
-            const booksCountVal = document.getElementById('books-count-val'); // عنصر جديد لعدد الكتب
+            const booksCountVal = document.getElementById('books-count-val'); 
             const shippingSec = document.getElementById('shipping-sec');
             const shippingVal = document.getElementById('shipping-val');
             const grandTotalSec = document.getElementById('grand-total-sec');
@@ -2000,16 +2075,24 @@
             const provinceSelect = document.getElementById('customer-province');
             const orderUI = document.getElementById('order-ui-wrapper');
 
-            // تحديث أزرار الإضافة في الصفحة الرئيسية (علامة الصح)
+            // تحديث أزرار الإضافة (اللوجو) في الصفحة الرئيسية والأقسام السفلية فقط
             if (window.fullData) {
                 window.fullData.forEach(book => {
-                    const btn = document.getElementById(`add-btn-${book.id}`);
-                    if (btn) {
-                        const isInCart = cart.find(i => i.id === book.id);
+                    const isInCart = cart.find(i => String(i.id) === String(book.id));
+                    const btns = document.querySelectorAll(`[data-id="${book.id}"]`);
+                    btns.forEach(btn => {
                         btn.classList.toggle('success', !!isInCart);
                         btn.innerHTML = isInCart ? '<i class="bi bi-check-lg"></i>' : '<i class="bi bi-cart-plus"></i>';
-                    }
+                    });
                 });
+            }
+
+            // تحديث زر صفحة التفاصيل المربع بشكل منفصل (نص + أيقونة)
+            const detailsBtn = document.getElementById('details-add-btn');
+            if (detailsBtn && window.currentOpenedBookId) {
+                const isInCart = cart.find(i => String(i.id) === String(window.currentOpenedBookId));
+                detailsBtn.classList.toggle('success', !!isInCart);
+                detailsBtn.innerHTML = isInCart ? '<i class="bi bi-check-lg"></i> تم الإضافة' : '<i class="bi bi-cart-plus"></i> إضافة للسلة';
             }
 
             updateGlobalCartCount(); // تحديث عداد السلة العالمي
@@ -2135,7 +2218,7 @@
             const btn = document.getElementById(`wish-btn-${id}`);
             const isNowInWishlist = wishlist.includes(id);
 
-            if (icon) icon.className = isNowInWishlist ? 'bi bi-bookmark-heart-fill' : 'bi bi-bookmark-heart';
+            if (icon) icon.className = 'bi bi-bookmark-heart'; // الحفاظ على شكل اللوجو موحداً
             if (btn) btn.classList.toggle('active', isNowInWishlist);
             
             // تحديث زر المفضلة داخل صفحة التفاصيل إذا كانت مفتوحة
