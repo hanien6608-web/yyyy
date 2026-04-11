@@ -6,10 +6,12 @@
     <title>يوتوبيا لاند - عالم عشاق الكتب</title>
     <!-- خط كايرو الفخم من جوجل -->
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700&display=swap" rel="stylesheet">
+    <!-- مكتبة Supabase للتعامل مع قاعدة البيانات -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <!-- مكتبة أيقونات Bootstrap -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     <style>
-        :root {
+        :root { /* تعريف المتغيرات والألوان الأساسية للموقع لسهولة التعديل */
             --wood-dark: #2c1b10;
             --wood-mid: #4a3423;
             --paper-light: #e6d5b8;
@@ -23,32 +25,33 @@
             --library-bg: url('https://ywbmamklqyrahwqifqdj.supabase.co/storage/v1/object/public/books-images/oo.jpg'); 
         }
 
-        * { 
+        * { /* إعدادات عامة لكل العناصر لضمان تناسق المسافات والحواف */
             box-sizing: border-box; 
             margin: 0; 
             padding: 0; 
             transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1); 
         }
 
-        body {
+        body { /* إعدادات جسم الصفحة والخط */
             font-family: 'Cairo', sans-serif;
             background-color: #000;
-            color: var(--text-main);
-            overflow-x: hidden;
-        }
-
-        .page-wrapper {
+            /* جعل الخلفية موحدة وثابتة للموقع بالكامل */
             background-image: var(--library-bg);
             background-size: cover;
             background-position: center;
             background-attachment: fixed;
+            color: var(--text-main);
+            overflow-x: hidden;
+        }
+
+        .page-wrapper { /* الحاوية الكبرى التي تحمل الخلفية الثابتة */
             min-height: 100vh;
             position: relative;
         }
 
-        .main-content {
-            background: rgba(0, 0, 0, 0.55);
-            backdrop-filter: blur(4px);
+        .main-content { /* طبقة التغبيش فوق الخلفية لجعل النص واضحاً */
+            background: rgba(0, 0, 0, 0.55); /* الدرجة المطلوبة لتفتيح الخلفية وجعلها واضحة */
+            backdrop-filter: blur(4px); /* الدرجة المطلوبة للتغبيش */
             min-height: 100vh;
             display: flex;
             flex-direction: column;
@@ -68,7 +71,7 @@
             align-items: center;
         }
 
-        .logo {
+        .logo { /* تنسيق شعار الموقع */
             font-size: 1.8rem;
             font-weight: bold;
             color: var(--paper-light);
@@ -160,7 +163,7 @@
             box-shadow: 0 0 15px rgba(212, 163, 115, 0.4);
         }
 
-        /* تنسيق المربع الصغير (Dropdown) للشريط السفلي */
+        /* تنسيق القائمة المنسدلة للتصنيفات في الشريط السفلي */
         .category-dropdown {
             position: absolute;
             bottom: 120%; /* يظهر فوق الزرار */
@@ -213,7 +216,7 @@
             }
         }
 
-        .book-card {
+        .book-card { /* تنسيق كارت الكتاب */
             background: var(--card-bg); 
             border-radius: 15px;
             padding: 12px;
@@ -300,7 +303,229 @@
             transition: 0.3s ease;
         }
 
-        .dot.active { background: var(--accent-wood); transform: scale(1.2); }
+        /* --- تحويل صفحة التفاصيل لتجربة كاملة متصلة (Premium Full Page) --- */
+        .book-details-page {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            /* توحيد درجة التعتيم والتغبيش مع الصفحة الرئيسية لتكون أفتح وأكثر وضوحاً */
+            background: rgba(0, 0, 0, 0.55);
+            /* جعل خلفية التفاصيل أغمق قليلاً لضمان بروز النصوص والعناصر بشكل أفضل */
+            background: rgba(0, 0, 0, 0.75);
+            backdrop-filter: blur(4px);
+            z-index: 20000;
+            display: none; /* مخفية افتراضياً */
+            flex-direction: column;
+            overflow-y: auto;
+            scroll-behavior: smooth;
+        }
+
+        /* انميشن الدخول السينمائي للتحول لصفحة كاملة */
+        @keyframes pageFadeIn {
+            from { opacity: 0; transform: scale(1.05); filter: blur(10px); }
+            to { opacity: 1; transform: scale(1); filter: blur(0); }
+        }
+
+        .book-details-page.active {
+            display: flex;
+            animation: pageFadeIn 0.6s cubic-bezier(0.23, 1, 0.32, 1) forwards;
+        }
+
+        .details-overlay {
+            /* إزالة التعتيم من هنا لضمان اتصال الخلفية الداكنة مع الأقسام السفلية كقطعة واحدة */
+            background: transparent;
+            width: 100%;
+            min-height: 100vh;
+            padding: 40px 5%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .details-container {
+            max-width: 900px;
+            width: 100%;
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 30px;
+            animation: fadeInUp 0.5s ease;
+        }
+
+        @media (min-width: 768px) {
+            .details-container { grid-template-columns: 1fr 1.5fr; align-items: start; }
+        }
+
+        /* --- تنسيق معرض الصور في التفاصيل --- */
+        .details-image-container {
+            position: relative;
+            width: 100%;
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+            border: var(--border-accent);
+            background: rgba(0,0,0,0.2);
+        }
+
+        .details-slider {
+            display: flex;
+            transition: transform 0.5s ease-in-out;
+        }
+
+        .details-slider img {
+            width: 100%;
+            flex-shrink: 0;
+            object-fit: contain;
+            max-height: 500px;
+        }
+
+        .slider-dots {
+            position: absolute;
+            bottom: 15px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 10px;
+        }
+
+        .slider-dot {
+            width: 10px;
+            height: 10px;
+            background: rgba(212, 163, 115, 0.3);
+            border-radius: 50%;
+            cursor: pointer;
+        }
+        .slider-dot.active { background: var(--accent-wood); transform: scale(1.3); }
+
+        /* --- تنسيق النجوم --- */
+        .star-rating {
+            color: #ffc107; /* لون النجوم الذهبي */
+            font-size: 1.1rem;
+            margin-bottom: 10px;
+            display: flex;
+            gap: 3px;
+        }
+
+        .details-info h1 { color: var(--paper-light); margin-bottom: 10px; font-size: 2.2rem; }
+        .details-info .author { color: var(--accent-wood); font-size: 1.2rem; margin-bottom: 20px; }
+        .details-info .full-desc { color: var(--desc-color); line-height: 1.8; margin-bottom: 30px; font-size: 1rem; }
+        .details-info .full-desc { color: var(--paper-light); opacity: 0.9; line-height: 1.8; margin-bottom: 30px; font-size: 1rem; }
+        
+        .details-actions { display: flex; gap: 15px; flex-wrap: wrap; align-items: center; margin-top: 25px; }
+
+        /* زر العودة المطور */
+        .back-btn {
+            background: rgba(0, 0, 0, 0.5); /* خلفية داكنة شفافة لفخامة أكثر */
+            color: var(--paper-light);
+            border: 1.5px solid rgba(212, 163, 115, 0.5);
+            padding: 12px 30px;
+            border-radius: 50px; /* شكل بيضاوي احترافي */
+            cursor: pointer;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            backdrop-filter: blur(10px); /* تأثير زجاجي خلف الزر */
+            box-shadow: 0 8px 20px rgba(0,0,0,0.4);
+            font-size: 1rem;
+        }
+        .back-btn i { 
+            font-size: 1.4rem; 
+            -webkit-text-stroke: 1px; /* جعل أيقونة السهم سميكة */
+            transition: transform 0.3s ease; 
+        }
+        .back-btn:hover { 
+            background: var(--accent-wood); 
+            color: var(--wood-dark);
+            transform: translateX(10px); /* حركة انسيابية لليمين عند التحويم */
+            box-shadow: 0 12px 30px rgba(212, 163, 115, 0.6);
+            border-color: var(--paper-light);
+        }
+        .back-btn:hover i { transform: translateX(5px); } /* تحريك السهم نفسه بشكل منفصل */
+
+        /* --- أسهم التنقل في السلايدر --- */
+        .slider-arrow {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid var(--accent-wood);
+            color: var(--accent-wood);
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            z-index: 100;
+            transition: 0.3s;
+            font-size: 1.2rem;
+        }
+        .slider-arrow:hover { background: var(--accent-wood); color: var(--wood-dark); }
+        .arrow-prev { right: 10px; }
+        .arrow-next { left: 10px; }
+
+        .extra-sections-wrapper { width: 100%; max-width: 900px; margin-top: 60px; padding-top: 40px; border-top: 1px solid rgba(212, 163, 115, 0.2); }
+        .section-header { display: flex; align-items: center; gap: 10px; color: var(--paper-light); margin-bottom: 25px; border-right: 4px solid var(--accent-wood); padding-right: 15px; font-size: 1.4rem; font-weight: 800; }
+        .section-header i { color: var(--accent-wood); font-size: 1.5rem; }
+
+        /* متحكم الكمية في صفحة التفاصيل */
+        .details-qty-container {
+            display: flex;
+            align-items: center;
+            background: rgba(0, 0, 0, 0.4);
+            padding: 8px;
+            border-radius: 50px;
+            border: 1px solid rgba(212, 163, 115, 0.3);
+            gap: 20px;
+        }
+
+        .qty-btn-det { /* أزرار الكمية في صفحة التفاصيل (مثل السلة ولكن أكبر) */
+            background: var(--accent-wood); /* اللون الفاتح أصبح ثابتاً */
+            border: none;
+            border-radius: 50%;
+            width: 45px;
+            height: 45px;
+            color: var(--wood-dark); /* الأيقونة بلون داكن لتظهر بوضوح */
+            cursor: pointer;
+            font-size: 1.2rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: 0.3s;
+        }
+        .qty-btn-det i { -webkit-text-stroke: 1.2px; } /* جعل اللوجو سميكاً */
+        .qty-btn-det:hover { transform: scale(1.1); box-shadow: 0 0 15px var(--accent-wood); }
+
+        /* زر المفضلة الكبير */
+        .wish-btn-large {
+            width: 45px;
+            height: 45px;
+            background: rgba(0, 0, 0, 0.5); /* اللون الافتراضي داكن */
+            border: 1px solid var(--accent-wood);
+            border-radius: 50%; /* جعل زر المفضلة دائرياً ليناغم الستايل الجديد */
+            color: var(--accent-wood);
+            font-size: 1.4rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: 0.4s;
+        }
+        .wish-btn-large i { -webkit-text-stroke: 1px; } /* جعل القلب سميكاً */
+        
+        /* حالة "التنوير" عند إضافة الكتاب للمفضلة */
+        .wish-btn-large.active {
+            background: var(--accent-wood);
+            color: var(--wood-dark);
+            box-shadow: 0 0 20px var(--accent-wood);
+        }
+        .wish-btn-large:hover { transform: scale(1.1); }
+
+        .dot.active { background: var(--accent-wood); transform: scale(1.2); } /* النقطة النشطة في مؤشر الصور */
 
         .book-actions {
             position: absolute;
@@ -325,6 +550,15 @@
             box-shadow: 0 4px 8px rgba(0,0,0,0.3);
             font-size: 1.1rem;
             border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .action-icon i { -webkit-text-stroke: 1px; } /* جعل أيقونة القلب سميكة في الكارت */
+
+        /* حالة التنوير للمفضلة في الكارت الرئيسي */
+        .action-icon.active {
+            background: var(--accent-wood);
+            color: var(--wood-dark);
+            box-shadow: 0 0 15px var(--accent-wood);
         }
 
         .action-icon:hover {
@@ -352,7 +586,7 @@
             margin-bottom: 15px;
         }
 
-        .price-cart-container {
+        .price-cart-container { /* حاوية السعر وزر الإضافة */
             display: flex;
             justify-content: space-between;
             align-items: center;
@@ -418,7 +652,7 @@
             gap: 0; /* إلغاء الفراغات بين عناصر الفوتر */
         }
 
-        .dedication-box {
+        .dedication-box { /* صندوق الإهداء في أسفل الصفحة */
             background: var(--card-bg);
             backdrop-filter: blur(15px);
             border-radius: 0;
@@ -584,7 +818,7 @@
             display: none;
         }
 
-        .cart-drawer {
+        .cart-drawer { /* نافذة السلة الجانبية التي تظهر من اليمين */
             position: fixed;
             top: 0;
             right: -100%;
@@ -618,7 +852,7 @@
         }
         .cart-header h3 i { font-size: 1.5rem; vertical-align: middle; margin-right: 8px; } /* تنسيق أيقونة العنوان */
 
-        .close-drawer {
+        .close-drawer { /* زر إغلاق النافذة */
             cursor: pointer;
             font-size: 2rem;
             color: var(--accent-wood);
@@ -660,7 +894,7 @@
         .cart-item-details h4 { font-size: 0.95rem; color: var(--paper-light); margin-bottom: 4px; }
         .cart-item-details p { font-size: 0.85rem; color: var(--accent-wood); font-weight: bold; }
 
-        .cart-controls {
+        .cart-controls { /* أزرار زيادة ونقصان الكمية داخل السلة */
             display: flex;
             align-items: center;
             gap: 5px; /* تقليل المسافة بين الأزرار والرقم */
@@ -692,7 +926,7 @@
         
         .qty-val { font-weight: bold; min-width: 25px; text-align: center; font-size: 1rem; color: var(--paper-light); }
 
-        .remove-item-btn {
+        .remove-item-btn { /* زر حذف العنصر من السلة */
             color: var(--accent-wood); /* تغيير اللون للذهبي */
             cursor: pointer;
             font-size: 1.3rem; /* تعديل حجم أيقونة الحذف */
@@ -701,7 +935,7 @@
         }
         .remove-item-btn:hover { transform: scale(1.2); color: var(--paper-light); } /* لون أفتح عند التحويم */
 
-        .cart-total-section {
+        .cart-total-section { /* أقسام عرض الحسابات (الإجمالي، الشحن) */
             background: rgba(212, 163, 115, 0.1);
             padding: 15px;
             border-radius: 12px;
@@ -972,7 +1206,8 @@
             box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5), 0 0 20px rgba(212, 163, 115, 0.2);
             transition: 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
         }
-
+        .shop-now-btn i { -webkit-text-stroke: 1.2px; } /* أيقونة السلة سميكة أيضاً */
+        /* تأثير التحويم لزر تسوق الآن */
         .shop-now-btn:hover {
             background: var(--paper-light);
             transform: translateY(-5px) scale(1.05);
@@ -980,6 +1215,7 @@
         }
 
         .loading-msg, .error-msg {
+            /* رسائل التحميل والخطأ تأخذ عرض الشبكة بالكامل */
             grid-column: 1 / -1;
             text-align: center;
             padding: 50px;
@@ -1007,11 +1243,28 @@
             <div class="action-icon" onclick="showCategoriesAndHome()" style="width: 30px; height: 30px; font-size: 0.9rem;">
                 <i class="bi bi-house-door-fill"></i>
             </div>
+            <!-- إضافة أيقونة المفضلة للشريط العلوي لسهولة الوصول -->
+            <div class="action-icon" onclick="showWishlist()" style="width: 30px; height: 30px; font-size: 0.9rem; position: relative;">
+                <i class="bi bi-bookmark-heart-fill"></i>
+                <span id="sticky-wish-count" class="global-wish-badge" style="font-size: 0.6rem; min-width: 14px; height: 14px;">0</span>
+            </div>
             <div class="action-icon" onclick="openCart()" style="width: 30px; height: 30px; font-size: 0.9rem; position: relative;">
                 <i class="bi bi-cart3"></i>
                 <span id="sticky-cart-count" class="global-cart-badge" style="font-size: 0.6rem; min-width: 14px; height: 14px;">0</span>
             </div>
             <button id="lang-toggle" class="lang-btn" onclick="toggleLanguage()">EN</button>
+        </div>
+    </div>
+
+    <!-- صفحة تفاصيل الكتاب (تظهر عند النقر) -->
+    <div id="book-details-page" class="book-details-page">
+        <div class="details-overlay">
+            <div style="width: 100%; max-width: 900px; margin-bottom: 30px; display: flex; justify-content: flex-start; align-items: center;">
+                <button class="back-btn" onclick="closeBookDetails()"><i class="bi bi-arrow-right"></i> العودة للمكتبة</button>
+            </div>
+            <div id="details-content" class="details-container">
+                <!-- يتم ملؤه بواسطة الجافا سكريبت -->
+            </div>
         </div>
     </div>
 
@@ -1071,7 +1324,7 @@
                 </div>
                 <div class="bottom-bar-item" id="wishlist-tab" onclick="showWishlist()">
                     <span class="bar-icon">
-                        <i class="bi bi-bookmark-heart"></i>
+                        <i class="bi bi-bookmark-heart"></i> <!-- أيقونة المفضلة -->
                         <span id="global-wish-count" class="global-wish-badge">0</span>
                     </span>
                     <span>المفضلة</span>
@@ -1184,14 +1437,16 @@
     </div>
 
     <script>
+        // إعدادات الربط مع Supabase
         const supabaseUrl = 'https://ywbmamklqyrahwqifqdj.supabase.co';
         const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl3Ym1hbWtscXlyYWh3cWlmcWRqIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NTQ4MDM5OSwiZXhwIjoyMDkxMDU2Mzk5fQ.bHOZHb1zDAe-LUX1Vtt5G5UabhfHxUlQvrplxvZ0Dgo'; 
         const _supabase = supabase.createClient(supabaseUrl, supabaseKey);
 
+        // متغيرات الحالة العامة للموقع
         let cart = []; // مصفوفة لتخزين عناصر السلة
-        let wishlist = JSON.parse(localStorage.getItem('wishlist')) || [];
-        let wishlistNewCount = parseInt(localStorage.getItem('wishlistNewCount')) || 0;
-        let currentView = 'home';
+        let wishlist = JSON.parse(localStorage.getItem('wishlist')) || []; // قائمة المفضلة من التخزين المحلي
+        let wishlistNewCount = parseInt(localStorage.getItem('wishlistNewCount')) || 0; // عداد المفضلة الجديد
+        let currentView = 'home'; // العرض الحالي (الرئيسية أو المفضلة)
 
         // حاول تحميل السلة من LocalStorage عند بدء التشغيل
         try {
@@ -1246,12 +1501,12 @@
         };
 
         document.addEventListener('DOMContentLoaded', () => {
-            getMyLibraryData();
+            getMyLibraryData(); // جلب البيانات عند فتح الصفحة
             populateProvinces(); // ملء قائمة المحافظات عند تحميل الصفحة
             updateGlobalCartCount(); // تحديث عداد السلة عند تحميل الصفحة
             updateGlobalWishCount(); // تحديث عداد المفضلة
             
-            // مراقب السكرول للشريط العلوي
+            // مراقب السكرول لإظهار الشريط العلوي الثابت
             window.addEventListener('scroll', () => {
                 const stickyHeader = document.getElementById('sticky-header');
                 const triggerArea = document.querySelector('.categories-container');
@@ -1271,6 +1526,7 @@
                 if(dropdown) dropdown.classList.remove('open');
             });
 
+            // إرسال الرسالة في الشات عند الضغط على Enter
             document.getElementById('chat-input').addEventListener('keypress', function(e) {
                 if (e.key === 'Enter') sendMessage();
             });
@@ -1330,6 +1586,7 @@
             }
         }
 
+        // وظيفة جلب البيانات من Supabase
         async function getMyLibraryData() {
             window.fullData = [];
             const container = document.getElementById('books-list');
@@ -1345,6 +1602,7 @@
             renderBooksList(data);
         }
 
+        // وظيفة عرض قائمة الكتب في الصفحة
         function renderBooksList(data) {
             const container = document.getElementById('books-list');
             
@@ -1368,6 +1626,7 @@
             updateCartUI(); // لضمان ظهور علامات الصح
         }
 
+        // وظيفة بناء HTML لكارت الكتاب الواحد
         function renderBookCard(book, index) {
             const has2nd = book.image_url2 && book.image_url2 !== book.image_url;
             const isInWishlist = wishlist.includes(book.id);
@@ -1386,24 +1645,191 @@
             }
 
             return `
-                <div class="book-card" style="animation: fadeInUp ${0.3 + (index * 0.1)}s ease-out;">
+                <div class="book-card" style="animation: fadeInUp ${0.3 + (index * 0.1)}s ease-out;" onclick="showBookDetails(${book.id})">
                     <div class="image-box">
                         ${has2nd ? `<div class="hover-trigger trigger-right"></div><div class="hover-trigger trigger-left"></div>` : ''}
                         <img src="${book.image_url}" class="main-img">
                         ${has2nd ? `<img src="${book.image_url2}" class="hover-img">` : ''}
                         <div class="image-indicators"><div class="dot active"></div>${has2nd ? `<div class="dot"></div>` : ''}</div>
                     </div>
-                    <div class="book-actions">
-                        <span class="action-icon" title="المفضلة" onclick="toggleWishlist(${book.id})">
+                    <div class="book-actions"> <!-- أزرار المفضلة فوق الصورة -->
+                        <span id="wish-btn-${book.id}" class="action-icon ${isInWishlist ? 'active' : ''}" title="المفضلة" 
+                              onclick="event.stopPropagation(); toggleWishlist(${book.id})">
                             <i id="wish-icon-${book.id}" class="bi ${isInWishlist ? 'bi-bookmark-heart-fill' : 'bi-bookmark-heart'}"></i>
                         </span>
                     </div>
                     <h3>${displayTitle}</h3>
+                    <div class="star-rating" style="justify-content: center; font-size: 0.8rem;">
+                        <i class="bi bi-star-fill"></i><i class="bi bi-star-fill"></i><i class="bi bi-star-fill"></i><i class="bi bi-star-fill"></i><i class="bi bi-star-half"></i>
+                    </div>
                     <p class="author-name">${t.by}: ${displayAuthor}</p>
                     <p class="book-desc">${displayDesc}</p>
                     <button class="cart-btn" id="add-btn-${book.id}" onclick="addItemToCart(${book.id})"><i class="bi bi-cart-plus"></i></button>
                     <div class="price-cart-container"><div class="price">${book.price} ${t.currency}</div></div>
                 </div>`;
+        }
+
+        // وظيفة فتح صفحة تفاصيل الكتاب
+        function showBookDetails(id) {
+            const book = window.fullData.find(b => b.id === id);
+            if (!book) return;
+
+            currentDetailsQty = 1; // إعادة ضبط الكمية عند فتح أي كتاب جديد
+            const detailsPage = document.getElementById('book-details-page');
+            const content = document.getElementById('details-content');
+            const isInWishlist = wishlist.includes(book.id);
+            const has2nd = book.image_url2 && book.image_url2 !== book.image_url;
+
+            content.innerHTML = `
+                <div class="details-image">
+                    <div class="details-image-container" id="details-img-container">
+                        <div class="details-slider" id="details-slider">
+                            <img src="${book.image_url}" alt="${book.title}">
+                            ${has2nd ? `<img src="${book.image_url2}" alt="${book.title}">` : ''}
+                        </div>
+                        ${has2nd ? `
+                        <!-- أسهم التنقل الاحترافية -->
+                        <button class="slider-arrow arrow-prev" onclick="event.stopPropagation(); slideDetails(0)"><i class="bi bi-chevron-right"></i></button>
+                        <button class="slider-arrow arrow-next" onclick="event.stopPropagation(); slideDetails(1)"><i class="bi bi-chevron-left"></i></button>
+                        <div class="slider-dots">
+                            <div class="slider-dot active" onclick="slideDetails(0)"></div>
+                            <div class="slider-dot" onclick="slideDetails(1)"></div>
+                        </div>` : ''}
+                    </div>
+                </div>
+                <div class="details-info">
+                    <div class="star-rating">
+                        <i class="bi bi-star-fill"></i>
+                        <i class="bi bi-star-fill"></i>
+                        <i class="bi bi-star-fill"></i>
+                        <i class="bi bi-star-fill"></i>
+                        <i class="bi bi-star-fill"></i>
+                        <span style="color: var(--desc-color); font-size: 0.9rem; margin-right: 10px;">(5.0)</span>
+                    </div>
+                    <h1>${book.title}</h1>
+                    <p class="author">بواسطة: ${book.author}</p>
+                    <p class="full-desc">${book.description || 'لا يوجد وصف متاح لهذا الكتاب حالياً في يوتوبيا لاند.'}</p>
+                    <div style="font-size: 2rem; color: var(--paper-light); margin-bottom: 25px; font-weight: bold;">${book.price} ج.م</div>
+                    <div class="details-actions">
+                        <!-- متحكم الكمية -->
+                        <div class="details-qty-container">
+                            <button class="qty-btn-det" onclick="updateDetQty(-1)"><i class="bi bi-dash"></i></button>
+                            <span id="det-qty-val" style="font-size: 1.6rem; font-weight: bold; color: var(--paper-light); min-width: 30px; text-align: center;">1</span>
+                            <button class="qty-btn-det" onclick="updateDetQty(1)"><i class="bi bi-plus"></i></button>
+                        </div>
+
+                        <!-- زر الإضافة الاحترافي -->
+                        <button class="shop-now-btn" style="flex: 1; min-width: 200px;" onclick="addItemToCart(${book.id}, currentDetailsQty)">
+                            <i class="bi bi-cart-plus"></i> إضافة للسلة
+                        </button>
+                        
+                        <!-- زر المفضلة الكبير -->
+                        <button id="details-wish-btn" class="wish-btn-large ${isInWishlist ? 'active' : ''}" onclick="toggleWishlist(${book.id}); updateDetailsWishBtn(${book.id})">
+                            <i id="details-wish-icon" class="bi ${isInWishlist ? 'bi-bookmark-heart-fill' : 'bi-bookmark-heart'}"></i> <!-- لوجو المفضلة فقط -->
+                        </button>
+                    </div>
+                </div>
+
+                <!-- قسم الأكثر مبيعاً والمقترحات -->
+                <div class="extra-sections-wrapper" style="grid-column: 1 / -1;">
+                    <div class="section-header">
+                        <i class="bi bi-fire"></i>
+                        <span>الأكثر مبيعاً في يوتوبيا</span>
+                    </div>
+                    <div class="books-grid" style="grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 40px;">
+                        ${getRandomBooks(4).map(b => renderSmallCard(b)).join('')}
+                    </div>
+
+                    <div class="section-header">
+                        <i class="bi bi-lightbulb-fill"></i>
+                        <span>كتب قد تهمك</span>
+                    </div>
+                    <div class="books-grid" style="grid-template-columns: repeat(2, 1fr); gap: 10px;">
+                        ${getRelatedBooks(book).map(b => renderSmallCard(b)).join('')}
+                    </div>
+                </div>
+            `;
+
+            // تحسين العرض على الشاشات الكبيرة للأقسام الإضافية
+            if (window.innerWidth >= 1024) {
+                const grids = content.querySelectorAll('.extra-sections-wrapper .books-grid');
+                grids.forEach(g => g.style.gridTemplateColumns = 'repeat(4, 1fr)');
+            }
+
+            detailsPage.style.display = 'flex'; 
+            // تفعيل الانميشن
+            setTimeout(() => detailsPage.classList.add('active'), 10);
+            
+            document.body.style.overflow = 'hidden'; // منع التمرير في الخلفية
+            
+            // التأكد من العودة للأعلى عند فتح كتاب جديد
+            detailsPage.scrollTo(0,0);
+        }
+
+        // وظيفة تحريك السلايدر في التفاصيل
+        function slideDetails(index) {
+            const slider = document.getElementById('details-slider');
+            const dots = document.querySelectorAll('.slider-dot');
+            if (slider) {
+                slider.style.transform = `translateX(${index * 100}%)`; // الاتجاه حسب RTL
+                if (document.documentElement.dir === 'ltr') slider.style.transform = `translateX(-${index * 100}%)`;
+                dots.forEach((dot, i) => dot.classList.toggle('active', i === index));
+            }
+        }
+
+        // دالة لجلب كتب عشوائية لقسم الأكثر مبيعاً
+        function getRandomBooks(count) {
+            return [...window.fullData].sort(() => 0.5 - Math.random()).slice(0, count);
+        }
+
+        // دالة لجلب كتب من نفس التصنيف
+        function getRelatedBooks(currentBook) {
+            return window.fullData.filter(b => 
+                b.category === currentBook.category && b.id !== currentBook.id
+            ).slice(0, 4);
+        }
+
+        // دالة لرسم كارت صغير للأقسام السفلية
+        function renderSmallCard(book) {
+            const lang = document.documentElement.lang || 'ar';
+            const t = translations[lang];
+            return `
+                <div class="book-card" style="padding: 8px; font-size: 0.8rem;" onclick="event.stopPropagation(); showBookDetails(${book.id})">
+                    <div class="image-box" style="height: 120px;">
+                        <img src="${book.image_url}" style="object-fit: cover;">
+                    </div>
+                    <h3 style="font-size: 0.8rem; height: 35px; overflow: hidden;">${book.title}</h3>
+                    <div class="price" style="font-size: 0.9rem;">${book.price} ${t.currency}</div>
+                    <button class="cart-btn" style="width: 25px; height: 25px; font-size: 0.8rem; bottom: 8px; left: 8px;" onclick="event.stopPropagation(); addItemToCart(${book.id})">
+                        <i class="bi bi-cart-plus"></i>
+                    </button>
+                </div>
+            `;
+        }
+
+        // وظيفة تحديث الكمية داخل صفحة التفاصيل
+        function updateDetQty(delta) {
+            currentDetailsQty += delta;
+            if (currentDetailsQty < 1) currentDetailsQty = 1;
+            const qtyDisplay = document.getElementById('det-qty-val');
+            if (qtyDisplay) qtyDisplay.innerText = currentDetailsQty;
+        }
+
+        function closeBookDetails() {
+            const detailsPage = document.getElementById('book-details-page');
+            detailsPage.classList.remove('active');
+            // الانتظار حتى ينتهي الانميشن قبل الإخفاء التام
+            setTimeout(() => detailsPage.style.display = 'none', 500);
+            document.body.style.overflow = 'auto';
+        }
+
+        function updateDetailsWishBtn(id) {
+            const btn = document.getElementById('details-wish-btn');
+            const icon = document.getElementById('details-wish-icon');
+            const isActive = wishlist.includes(id);
+            
+            if (btn) btn.classList.toggle('active', isActive);
+            if (icon) icon.className = isActive ? 'bi bi-bookmark-heart-fill' : 'bi bi-bookmark-heart';
         }
 
         // وظيفة توحيد الحروف العربية للبحث الذكي
@@ -1487,6 +1913,7 @@
             }
         };
 
+        // وظيفة إرسال رسالة في الشات
         // وظيفة تبديل اللغة (تجريبية)
         function toggleLanguage() {
             const html = document.documentElement;
@@ -1540,14 +1967,18 @@
             renderBooksList(currentData);
         }
 
-        function addItemToCart(id) {
+        // وظيفة إضافة كتاب للسلة
+        let currentDetailsQty = 1; // متغير لحفظ الكمية المختارة في صفحة التفاصيل
+
+        // وظيفة إضافة كتاب للسلة (محدثة لتدعم الكمية المخصصة)
+        function addItemToCart(id, customQty = 1) {
             const book = window.fullData.find(b => b.id === id);
             const inCart = cart.find(i => i.id === id);
             
             if (inCart) {
-                inCart.qty++;
+                inCart.qty += customQty;
             } else {
-                cart.push({ ...book, qty: 1 });
+                cart.push({ ...book, qty: customQty });
             }
             
             updateCartUI();
@@ -1555,6 +1986,7 @@
             setTimeout(openCart, 600);
         }
 
+        // وظيفة تحديث واجهة السلة بالكامل
         function updateCartUI() {
             const container = document.getElementById('cart-items-container');
             const totalVal = document.getElementById('total-val');
@@ -1643,6 +2075,7 @@
             grandTotalVal.innerText = booksTotal + shippingCost; // تحديث قيمة الإجمالي الكلي
         }
 
+        // وظيفة تغيير الكمية (+ أو -)
         function changeQty(idx, delta) {
             cart[idx].qty += delta;
             if (cart[idx].qty < 1) {
@@ -1653,6 +2086,7 @@
             }
         }
 
+        // وظيفة حذف عنصر من السلة نهائياً
         function deleteFromCart(idx) {
             cart.splice(idx, 1);
             updateCartUI();
@@ -1660,10 +2094,12 @@
             if (cart.length === 0) closeCart(); // إغلاق السلة إذا أصبحت فارغة
         }
 
+        // حفظ حالة السلة في ذاكرة المتصفح
         function saveCartToLocalStorage() {
             localStorage.setItem('cart', JSON.stringify(cart));
         }
 
+        // تحديث عداد السلة في الأيقونات
         function updateGlobalCartCount() {
             const globalCountElement = document.getElementById('global-cart-count');
             const stickyCountElement = document.getElementById('sticky-cart-count');
@@ -1679,6 +2115,7 @@
             }
         }
 
+        // وظيفة إضافة أو حذف من المفضلة
         function toggleWishlist(id) {
             const idx = wishlist.indexOf(id);
             if (idx === -1) {
@@ -1686,28 +2123,44 @@
                 wishlistNewCount++;
             } else {
                 wishlist.splice(idx, 1);
+                if (wishlistNewCount > 0) wishlistNewCount--; // تقليل عداد التنبيه إذا تم حذف كتاب لم يُشاهد بعد
             }
             localStorage.setItem('wishlist', JSON.stringify(wishlist));
             localStorage.setItem('wishlistNewCount', wishlistNewCount);
             
             updateGlobalWishCount();
             
+            // تحديث الأيقونات في الكارت الرئيسي وفي صفحة التفاصيل معاً
+            const icon = document.getElementById(`wish-icon-${id}`);
+            const btn = document.getElementById(`wish-btn-${id}`);
+            const isNowInWishlist = wishlist.includes(id);
+
+            if (icon) icon.className = isNowInWishlist ? 'bi bi-bookmark-heart-fill' : 'bi bi-bookmark-heart';
+            if (btn) btn.classList.toggle('active', isNowInWishlist);
+            
+            // تحديث زر المفضلة داخل صفحة التفاصيل إذا كانت مفتوحة
+            updateDetailsWishBtn(id);
+
             if (currentView === 'wishlist') {
-                showWishlist(); // حذف فوري من الصفحة
-            } else {
-                const icon = document.getElementById(`wish-icon-${id}`);
-                if (icon) icon.className = wishlist.includes(id) ? 'bi bi-bookmark-heart-fill' : 'bi bi-bookmark-heart';
+                showWishlist(); // تحديث فوري إذا كنا داخل صفحة المفضلة
             }
         }
 
+        // تحديث عداد المفضلة في الأيقونات
         function updateGlobalWishCount() {
             const el = document.getElementById('global-wish-count');
+            const stickyEl = document.getElementById('sticky-wish-count');
             if (el) {
-                el.innerText = wishlistNewCount;
+                el.innerText = wishlistNewCount; // عرض عدد الكتب الجديدة فقط (الإشعار)
                 el.style.display = wishlistNewCount > 0 ? 'flex' : 'none';
+            }
+            if (stickyEl) { // تحديث العداد في الشريط العلوي أيضاً
+                stickyEl.innerText = wishlistNewCount;
+                stickyEl.style.display = wishlistNewCount > 0 ? 'flex' : 'none';
             }
         }
 
+        // عرض صفحة المفضلة فقط
         function showWishlist() {
             currentView = 'wishlist';
             wishlistNewCount = 0; // تصفير العداد عند الدخول
@@ -1722,6 +2175,7 @@
             renderBooksList(filtered);
         }
 
+        // العودة للرئيسية وإعادة ضبط الفلاتر
         function showCategoriesAndHome() {
             currentView = 'home';
             
@@ -1780,7 +2234,7 @@
             provinceSelect.addEventListener('change', updateCartUI);
         }
 
-        // وظيفة التحقق من الطلب
+        // وظيفة التحقق من صحة بيانات العميل وإرسال الطلب
         function confirmOrder() {
             if (cart.length === 0) {
                 alert("السلة فارغة! لا يمكن تأكيد طلب بدون كتب.");
@@ -1870,6 +2324,7 @@
             document.getElementById('drawer-overlay').classList.remove('open');
         }
 
+        // إرسال رسائل سريعة في الشات
         function sendQuickMsg(text) {
             appendMessage(text, 'user');
             setTimeout(() => {
@@ -1877,6 +2332,7 @@
             }, 1000);
         }
 
+        // معالجة إرسال الرسائل من العميل
         function sendMessage() {
             const input = document.getElementById('chat-input');
             if (!input.value.trim()) return;
@@ -1887,6 +2343,7 @@
             }, 1200);
         }
 
+        // إضافة فقاعة رسالة في واجهة الشات
         function appendMessage(text, side) {
             const chatBody = document.getElementById('chat-body');
             const msgDiv = document.createElement('div');
