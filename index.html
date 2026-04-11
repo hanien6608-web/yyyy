@@ -1034,7 +1034,7 @@
                 <ul class="categories-list" id="top-cat-list">
                     <li class="category-item active" onclick="handleCategorySelect('الكل', this)">الكل</li>
                     <li class="category-item" onclick="handleCategorySelect('روايات', this)">روايات</li>
-                    <li class="category-item" onclick="handleCategorySelect('فانتزيا', this)">فانتزيا</li>
+                    <li class="category-item" onclick="handleCategorySelect('فانتازيا', this)">فانتازيا</li>
                     <li class="category-item" onclick="handleCategorySelect('تنمية ذاتية', this)">تنمية ذاتية</li>
                     <li class="category-item" onclick="handleCategorySelect('ديني', this)">ديني</li>
                     <li class="category-item" onclick="handleCategorySelect('رعب', this)">رعب</li>
@@ -1056,7 +1056,7 @@
                     <div class="category-dropdown" id="cat-dropdown-menu">
                         <div class="dropdown-item active" onclick="handleCategorySelect('الكل', this)">الكل</div>
                         <div class="dropdown-item" onclick="handleCategorySelect('روايات', this)">روايات</div>
-                        <div class="dropdown-item" onclick="handleCategorySelect('فانتزيا', this)">فانتزيا</div>
+                        <div class="dropdown-item" onclick="handleCategorySelect('فانتازيا', this)">فانتازيا</div>
                     <div class="dropdown-item" onclick="handleCategorySelect('تنمية ذاتية', this)">تنمية ذاتية</div>
                         <div class="dropdown-item" onclick="handleCategorySelect('ديني', this)">ديني</div>
                         <div class="dropdown-item" onclick="handleCategorySelect('رعب', this)">رعب</div>
@@ -1321,7 +1321,11 @@
             if (category === 'الكل') {
                 renderBooksList(window.fullData);
             } else {
-                const filtered = window.fullData.filter(book => book.category === category);
+                const filtered = window.fullData.filter(book => {
+                    if (!book.category) return false;
+                    // تقسيم التصنيفات والتأكد من وجود القسم المختار
+                    return book.category.split(',').map(c => c.trim()).includes(category);
+                });
                 renderBooksList(filtered);
             }
         }
@@ -1402,15 +1406,37 @@
                 </div>`;
         }
 
-        // وظيفة مزامنة البحث بين الشريطين والفلترة
+        // وظيفة توحيد الحروف العربية للبحث الذكي
+        function normalizeArabic(text) {
+            if (!text) return "";
+            return text
+                .replace(/[أإآ]/g, "ا")
+                .replace(/ة/g, "ه")
+                .trim();
+        }
+
+        // وظيفة البحث الذكي (الكلمة الكاملة وتجاهل الفروق البسيطة)
         function syncSearch(val) {
             document.getElementById('main-search').value = val;
             document.getElementById('sticky-search').value = val;
             
-            const filtered = window.fullData.filter(book => 
-                book.title.toLowerCase().includes(val.toLowerCase()) || 
-                book.author.toLowerCase().includes(val.toLowerCase())
-            );
+            const term = val.trim();
+            if (!term) {
+                renderBooksList(window.fullData);
+                return;
+            }
+
+            const normTerm = normalizeArabic(term).toLowerCase();
+            const escapedTerm = normTerm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            // البحث عن الكلمة كاملة (Full Word Only)
+            const regex = new RegExp(`(^|\\s)${escapedTerm}(\\s|$)`, 'i');
+
+            const filtered = window.fullData.filter(book => {
+                const normTitle = normalizeArabic(book.title).toLowerCase();
+                const normAuthor = normalizeArabic(book.author).toLowerCase();
+                return regex.test(normTitle) || regex.test(normAuthor);
+            });
+
             renderBooksList(filtered);
         }
 
@@ -1420,7 +1446,7 @@
                 logo: "يوتوبيا لاند",
                 search: "ابحث عن عنوان أو كاتب...",
                 quickSearch: "بحث سريع...",
-                categories: ["الكل", "روايات", "فانتزيا", "تنمية ذاتية", "ديني", "رعب"],
+                categories: ["الكل", "روايات", "فانتازيا", "تنمية ذاتية", "ديني", "رعب"],
                 home: "الرئيسية",
                 cart: "السلة",
                 wishlist: "المفضلة",
