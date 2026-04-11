@@ -1722,15 +1722,32 @@
             renderBooksList(filtered);
         }
 
-        function showHome() {
+        function showCategoriesAndHome() {
             currentView = 'home';
-            // مسح محتوى البحث عند العودة للرئيسية
+            
+            // إغلاق أي نوافذ أو دراورات مفتوحة
+            closeCart();
+            closeSupport();
+
+            // مسح محتوى البحث
             document.getElementById('main-search').value = '';
             document.getElementById('sticky-search').value = '';
 
+            // إعادة ضبط فلاتر الأقسام (اختيار "الكل")
+            const topItems = document.querySelectorAll('.category-item');
+            const bottomItems = document.querySelectorAll('.dropdown-item');
+            topItems.forEach(i => i.classList.remove('active'));
+            bottomItems.forEach(i => i.classList.remove('active'));
+            if(topItems[0]) topItems[0].classList.add('active');
+            if(bottomItems[0]) bottomItems[0].classList.add('active');
+
+            // تفعيل التبويب الرئيسي (تصنيفات) في الشريط السفلي
             document.querySelectorAll('.bottom-bar-item').forEach(i => i.classList.remove('active'));
-            document.getElementById('home-tab').classList.add('active');
+            document.getElementById('categories-bottom-tab').classList.add('active');
+
+            // عرض كل البيانات والعودة للقمة
             renderBooksList(window.fullData);
+            window.scrollTo({ top: 0, behavior: 'smooth' });
         }
 
         function openCart() {
