@@ -1141,6 +1141,37 @@
         }
         .quick-btn:hover { background: var(--accent-wood); color: var(--wood-dark); }
 
+        /* --- تنسيقات زر الإرسال في شات الدعم الفني (الطيارة الورقية) --- */
+        .chat-send-btn {
+            position: absolute;
+            left: 25px; /* تحريك الزر لليمين قليلاً ليكون متوازناً بصرياً */
+            right: auto;
+            background: var(--accent-wood); /* خلفية ذهبية للزر */
+            border: none;
+            width: 42px;
+            height: 42px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 12px rgba(212, 163, 115, 0.3);
+            cursor: pointer;
+            transition: 0.3s;
+            z-index: 10; /* لضمان ظهور الزر فوق حقل الكتابة */
+        }
+        .chat-send-btn i {
+            font-size: 1.2rem; 
+            color: #3d2b1f; /* لون بني داكن وثقيل متناسق مع الاستايل */
+            /* تدوير الطائرة لليسار (أفقياً) بدقة */
+            transform: rotate(-135deg);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            -webkit-text-stroke: 1.2px #3d2b1f; /* زيادة سمك الخط ليكون واضحاً وثقيلاً */
+            line-height: 1;
+            margin: 0;
+        }
+
         body.cart-open { overflow: hidden; }
 
         .order-form {
@@ -1439,8 +1470,8 @@
         </div>
         <div class="input-group">
             <input type="text" id="chat-input" placeholder="اكتبي استفسارك هنا..." style="padding-left: 70px;">
-            <button class="action-icon" style="position: absolute; left: 10px; right: auto; background: var(--accent-wood); color: var(--wood-dark); border: none; padding: 6px 15px; border-radius: 20px; font-weight: bold; font-size: 0.85rem; box-shadow: 0 4px 12px rgba(212, 163, 115, 0.3); cursor: pointer;" onclick="sendMessage()">
-                إرسال
+            <button class="chat-send-btn" onclick="sendMessage()">
+                <i class="bi bi-send-fill"></i>
             </button>
         </div>
     </div>
@@ -1607,8 +1638,11 @@
                 return;
             }
 
-            window.fullData = data;
-            renderBooksList(data);
+            // ترتيب الكتب عشوائياً في كل مرة يتم فيها تحميل الموقع
+            const shuffledData = data.sort(() => Math.random() - 0.5);
+            
+            window.fullData = shuffledData;
+            renderBooksList(shuffledData);
         }
 
         // وظيفة عرض قائمة الكتب في الصفحة
@@ -2437,4 +2471,4 @@
         }
     </script>
 </body>
-</html>
+</html> 
