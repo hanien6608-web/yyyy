@@ -2495,6 +2495,7 @@
 
         // وظائف الدعم الفني الجديدة
         let chatSubscription = null;
+        let lastReceivedMsg = null; // لمنع تكرار الرسالة عند وصولها من طريقتين
 
         function showSupport() {
             document.getElementById('support-drawer').classList.add('open');
@@ -2539,15 +2540,24 @@
             }
 
             // الاشتراك في الرسائل الجديدة لحظياً (Real-time)
-            chatSubscription = _supabase.channel(`user-room-${phone}`)
+            chatSubscription = _supabase.channel(`chat-${phone}`, {
+                config: { broadcast: { self: false } }
+            })
                 .on('postgres_changes', { 
                     event: 'INSERT', 
                     schema: 'public', 
                     table: 'messages', 
                     filter: `customer_phone=eq.${phone}` 
                 }, payload => {
-                    if (payload.new.sender === 'admin') {
+                    // لو الرسالة مجتش عن طريق البث السريع، نظهرها هنا
+                    if (payload.new.sender === 'admin' && payload.new.text !== lastReceivedMsg) {
                         appendMessage(payload.new.text, 'bot');
+                    }
+                })
+                .on('broadcast', { event: 'msg' }, payload => {
+                    if (payload.payload.sender === 'admin') {
+                        lastReceivedMsg = payload.payload.text;
+                        appendMessage(payload.payload.text, 'bot');
                     }
                 }).subscribe();
 
@@ -2565,23 +2575,31 @@
         async function sendMessage() {
             const input = document.getElementById('chat-input');
             const text = input.value.trim();
-            // جلب الرقم من الذاكرة أو الخانة
             const savedPhone = localStorage.getItem('user_chat_phone');
             const cartPhone = document.getElementById('customer-phone') ? document.getElementById('customer-phone').value.trim() : '';
             const phone = savedPhone || cartPhone;
 
             if (!text) return;
+            
             if (!phone) {
                 alert("من فضلكِ أدخلي رقم الموبايل في خانة البيانات أولاً لنتمكن من متابعة شات الدعم معكِ.");
                 showSupport(); // لو مفيش رقم خالص، نرجعه لشاشة إدخال الرقم في الشات
                 return;
             }
 
+            if (!chatSubscription) await startChatSync(phone);
+
+            // إرسال فوري عبر البث للسرعة القصوى
+            chatSubscription.send({
+                type: 'broadcast',
+                event: 'msg',
+                payload: { text: text, sender: 'user' }
+            });
+
             appendMessage(text, 'user');
             input.value = '';
 
-            if (!chatSubscription) startChatSync(phone);
-
+            // حفظ في قاعدة البيانات
             await _supabase.from('messages').insert([{ 
                 customer_phone: phone, 
                 sender: 'user', 
