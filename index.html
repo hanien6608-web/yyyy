@@ -1465,8 +1465,11 @@
     <!-- نافذة الدعم الفني (Chat Support) -->
     <div id="support-drawer" class="support-drawer">
         <div class="cart-header">
-            <h3>مركز الدعم <i class="bi bi-headset"></i></h3>
-            <span class="close-drawer" onclick="closeSupport()"><i class="bi bi-x-lg"></i></span>
+            <h3 style="font-size: 1.1rem;">مركز الدعم <i class="bi bi-headset"></i></h3>
+            <div style="display: flex; gap: 10px; align-items: center;">
+                <button id="end-chat-btn" style="display: none; background: rgba(231, 76, 60, 0.2); color: #e74c3c; border: 1px solid #e74c3c; padding: 4px 10px; border-radius: 8px; font-size: 0.7rem; cursor: pointer; font-weight: bold;" onclick="endChat()">إنهاء الدردشة</button>
+                <span class="close-drawer" onclick="closeSupport()"><i class="bi bi-x-lg"></i></span>
+            </div>
         </div>
         <div id="chat-auth-section" style="padding: 20px; text-align: center; display: none;">
             <p style="margin-bottom: 15px; font-size: 0.9rem;">من فضلكِ أدخلي رقم الموبايل لبدء الدردشة مع الدعم الفني ✨</p>
@@ -1660,6 +1663,31 @@
             
             window.fullData = shuffledData;
             renderBooksList(shuffledData);
+
+            // تفعيل التحديث اللحظي للكتب (إضافة، تعديل، حذف)
+            _supabase.channel('realtime-books').on('postgres_changes', {
+                event: '*', 
+                schema: 'public',
+                table: 'books'
+            }, payload => {
+                console.log('تحديث في الكتب:', payload);
+                if (payload.eventType === 'INSERT') {
+                    window.fullData.unshift(payload.new);
+                } else if (payload.eventType === 'UPDATE') {
+                    const idx = window.fullData.findIndex(b => String(b.id) === String(payload.new.id));
+                    if (idx !== -1) window.fullData[idx] = payload.new;
+                } else if (payload.eventType === 'DELETE') {
+                    window.fullData = window.fullData.filter(b => String(b.id) !== String(payload.old.id));
+                }
+                
+                // إعادة عرض الكتب بناءً على القسم المختار حالياً
+                if (currentView === 'home') {
+                    const activeCat = document.querySelector('.category-item.active')?.innerText || 'الكل';
+                    filterByCategory(activeCat);
+                } else if (currentView === 'wishlist') {
+                    showWishlist();
+                }
+            }).subscribe();
         }
 
         // وظيفة عرض قائمة الكتب في الصفحة
@@ -2507,10 +2535,12 @@
 
             if (phoneToUse) {
                 document.getElementById('chat-auth-section').style.display = 'none';
+                document.getElementById('end-chat-btn').style.display = 'block';
                 document.getElementById('chat-body').style.display = 'flex';
                 startChatSync(phoneToUse);
             } else {
                 document.getElementById('chat-auth-section').style.display = 'block';
+                document.getElementById('end-chat-btn').style.display = 'none';
                 document.getElementById('chat-body').style.display = 'none';
             }
         }
@@ -2549,10 +2579,17 @@
                     table: 'messages', 
                     filter: `customer_phone=eq.${phone}` 
                 }, payload => {
-                    // لو الرسالة مجتش عن طريق البث السريع، نظهرها هنا
                     if (payload.new.sender === 'admin' && payload.new.text !== lastReceivedMsg) {
                         appendMessage(payload.new.text, 'bot');
                     }
+                })
+                .on('postgres_changes', {
+                    event: 'DELETE',
+                    schema: 'public',
+                    table: 'messages'
+                }, () => {
+                    // مسح الشات فوراً عند الحذف من الأدمن
+                    document.getElementById('chat-body').innerHTML = '<div class="msg msg-bot">تبدأ محادثة جديدة الآن... ✨</div>';
                 })
                 .on('broadcast', { event: 'msg' }, payload => {
                     if (payload.payload.sender === 'admin') {
@@ -2562,6 +2599,18 @@
                 }).subscribe();
 
             console.log("Subscribed to support chat for:", phone);
+        }
+
+        // وظيفة إنهاء الدردشة وتسجيل الخروج
+        function endChat() {
+            if(!confirm("هل أنتِ متأكدة من إنهاء الدردشة؟ سيتم مسح بيانات الدخول من هذا الجهاز.")) return;
+            localStorage.removeItem('user_chat_phone');
+            if (chatSubscription) {
+                _supabase.removeAllChannels();
+                chatSubscription = null;
+            }
+            document.getElementById('chat-body').innerHTML = '';
+            showSupport(); // لتحديث الواجهة وإظهار شاشة الدخول
         }
 
         // إرسال رسائل سريعة في الشات
