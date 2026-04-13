@@ -1144,32 +1144,37 @@
         /* --- تنسيقات زر الإرسال في شات الدعم الفني (الطيارة الورقية) --- */
         .chat-send-btn {
             position: absolute;
-            left: 25px; /* تحريك الزر لليمين قليلاً ليكون متوازناً بصرياً */
+            left: 10px; /* تحريك الزر لليمين قليلاً ليكون متوازناً بصرياً */
             right: auto;
             background: var(--accent-wood); /* خلفية ذهبية للزر */
             border: none;
-            width: 42px;
+            width: auto;
+            min-width: 80px;
             height: 42px;
-            border-radius: 50%;
+            border-radius: 25px;
             display: flex;
             align-items: center;
             justify-content: center;
+            gap: 8px;
+            padding: 0 15px;
             box-shadow: 0 4px 12px rgba(212, 163, 115, 0.3);
             cursor: pointer;
             transition: 0.3s;
             z-index: 10; /* لضمان ظهور الزر فوق حقل الكتابة */
+            font-weight: bold;
+            color: var(--wood-dark);
+        }
+        .chat-send-btn:hover {
+            background: var(--wood-mid);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 15px rgba(212, 163, 115, 0.4);
         }
         .chat-send-btn i {
-            font-size: 1.2rem; 
-            color: #3d2b1f; /* لون بني داكن وثقيل متناسق مع الاستايل */
-            /* تدوير الطائرة لليسار (أفقياً) بدقة */
-            transform: rotate(-135deg);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            -webkit-text-stroke: 1.2px #3d2b1f; /* زيادة سمك الخط ليكون واضحاً وثقيلاً */
-            line-height: 1;
-            margin: 0;
+            font-size: 1rem; 
+            /* تدوير الطائرة لليسار أفقياً تماماً */
+            transform: rotate(-90deg);
+            -webkit-text-stroke: 1.5px var(--wood-dark);
+            font-weight: bold;
         }
 
         body.cart-open { overflow: hidden; }
@@ -1382,6 +1387,7 @@
                     <ul class="social-links">
                         <li><a href="https://facebook.com/u_library" target="_blank"><i class="bi bi-facebook"></i> فيس بوك</a></li>
                         <li><a href="https://wa.me/u_library" target="_blank"><i class="bi bi-whatsapp"></i> واتس آب</a></li>
+                        <li><a href="admin.html" style="font-size: 0.8rem; opacity: 0.7;"><i class="bi bi-gear"></i> إدارة</a></li>
                     </ul>
                 </div>
             </footer>
@@ -1462,16 +1468,24 @@
             <h3>مركز الدعم <i class="bi bi-headset"></i></h3>
             <span class="close-drawer" onclick="closeSupport()"><i class="bi bi-x-lg"></i></span>
         </div>
-        <div class="chat-body" id="chat-body">
-            <div class="msg msg-bot">أهلاً بكِ في يوتوبيا لاند! ✨ كيف يمكننا مساعدتك اليوم؟ نحن هنا للرد على استفساراتك وشكاويكِ.</div>
+        <div id="chat-auth-section" style="padding: 20px; text-align: center; display: none;">
+            <p style="margin-bottom: 15px; font-size: 0.9rem;">من فضلكِ أدخلي رقم الموبايل لبدء الدردشة مع الدعم الفني ✨</p>
+            <div class="input-group">
+                <i class="bi bi-phone"></i>
+                <input type="tel" id="chat-phone-input" placeholder="رقم الموبايل (11 رقم)">
+            </div>
+            <button class="confirm-order-btn" style="width: 100%; margin-top: 15px;" onclick="identifyChatUser()">بدء المحادثة</button>
+        </div>
+        <div class="chat-body" id="chat-body" style="display: none;">
+            <div class="msg msg-bot">أهلاً بكِ! ✨ كيف يمكننا مساعدتكِ اليوم؟</div>
         </div>
         <div class="quick-actions">
             <button class="quick-btn" onclick="sendQuickMsg('الأوردر بتاعي لسه موصلش؟ 🚚')">الأوردر بتاعي لسه موصلش؟ 🚚</button>
         </div>
         <div class="input-group">
-            <input type="text" id="chat-input" placeholder="اكتبي استفسارك هنا..." style="padding-left: 70px;">
+            <input type="text" id="chat-input" placeholder="اكتبي استفسارك هنا..." style="padding-left: 120px;">
             <button class="chat-send-btn" onclick="sendMessage()">
-                <i class="bi bi-send-fill"></i>
+                <i class="bi bi-send-fill"></i> إرسال
             </button>
         </div>
     </div>
@@ -1479,7 +1493,7 @@
     <script>
         // إعدادات الربط مع Supabase
         const supabaseUrl = 'https://ywbmamklqyrahwqifqdj.supabase.co';
-        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl3Ym1hbWtscXlyYWh3cWlmcWRqIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NTQ4MDM5OSwiZXhwIjoyMDkxMDU2Mzk5fQ.bHOZHb1zDAe-LUX1Vtt5G5UabhfHxUlQvrplxvZ0Dgo'; 
+        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl3Ym1hbWtscXlyYWh3cWlmcWRqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU0ODAzOTksImV4cCI6MjA5MTA1NjM5OX0.Dw3-6ZwoADEN6H0eaG_XhwM01t6v5mpXzst19LDf9es'; 
         const _supabase = supabase.createClient(supabaseUrl, supabaseKey);
 
         // متغيرات الحالة العامة للموقع
@@ -1614,16 +1628,19 @@
 
         // وظيفة فلترة الكتب حسب القسم
         function filterByCategory(category) {
+            let filtered;
             if (category === 'الكل') {
-                renderBooksList(window.fullData);
+                filtered = window.fullData;
             } else {
-                const filtered = window.fullData.filter(book => {
+                filtered = window.fullData.filter(book => {
                     if (!book.category) return false;
                     // تقسيم التصنيفات والتأكد من وجود القسم المختار
                     return book.category.split(',').map(c => c.trim()).includes(category);
                 });
-                renderBooksList(filtered);
             }
+            // ترتيب عشوائي في كل مرة
+            const shuffled = filtered.sort(() => Math.random() - 0.5);
+            renderBooksList(shuffled);
         }
 
         // وظيفة جلب البيانات من Supabase
@@ -2352,7 +2369,7 @@
         }
 
         // وظيفة التحقق من صحة بيانات العميل وإرسال الطلب
-        function confirmOrder() {
+        async function confirmOrder() {
             if (cart.length === 0) {
                 alert("السلة فارغة! لا يمكن تأكيد طلب بدون كتب.");
                 return;
@@ -2364,12 +2381,14 @@
             const provinceSelect = document.getElementById('customer-province');
             const addressTextarea = document.getElementById('customer-address');
             const addressError = document.getElementById('address-error');
-            // const notesTextarea = document.getElementById('customer-notes'); // حقل الملاحظات اختياري، لا يحتاج تحقق
+            const notesTextarea = document.getElementById('customer-notes'); 
 
             const nameError = document.getElementById('name-error');
             const phoneError = document.getElementById('phone-error');
             const whatsappError = document.getElementById('whatsapp-error');
             const provinceError = document.getElementById('province-error');
+
+            const confirmBtn = document.querySelector('.confirm-order-btn');
 
             // إخفاء جميع رسائل الأخطاء أولاً
             nameError.style.display = 'none';
@@ -2419,45 +2438,155 @@
                 return; // إيقاف العملية إذا كان هناك أي خطأ
             }
 
-            // إذا كانت جميع البيانات صحيحة، يمكن إرسال الطلب
-            alert("تم استلام طلبك بنجاح! 🎉");
-            // هنا يمكنك إضافة منطق إرسال الطلب (مثلاً إلى Supabase أو WhatsApp)
-            
-            // مسح السلة بعد تأكيد الطلب
-            cart = [];
-            updateCartUI();
-            saveCartToLocalStorage(); // حفظ السلة بعد مسحها
-            closeCart();
+            // تجهيز البيانات لإرسالها لـ Supabase
+            const booksTotal = cart.reduce((acc, item) => acc + (item.price * item.qty), 0);
+            const totalAmount = booksTotal + shippingCost;
+
+            const orderData = {
+                customer_name: nameInput.value.trim(),
+                customer_phone: phoneInput.value.trim(),
+                customer_whatsapp: whatsappInput.value.trim(),
+                province: provinceSelect.value,
+                address: addressTextarea.value.trim(),
+                notes: notesTextarea ? notesTextarea.value.trim() : "",
+                items: cart, // سيتم تخزينه كـ JSON
+                total_amount: totalAmount,
+                shipping_cost: shippingCost,
+                status: 'pending' // حالة الطلب الافتراضية
+            };
+
+            try {
+                // تغيير حالة الزر أثناء الإرسال
+                confirmBtn.disabled = true;
+                confirmBtn.innerHTML = 'جاري إرسال الطلب... <i class="bi bi-hourglass-split"></i>';
+
+                // إرسال البيانات لجدول orders في Supabase
+                const { data, error } = await _supabase.from('orders').insert([orderData]);
+                
+                if (error) {
+                    throw new Error(`خطأ من سوبابيز: ${error.message} (كود: ${error.code})`);
+                }
+
+                alert("تم استلام طلبك بنجاح! 🎉 سيتم التواصل معك قريباً.");
+                
+                // مسح السلة والبيانات بعد النجاح
+                cart = [];
+                updateCartUI();
+                saveCartToLocalStorage();
+                
+                // مسح الحقول
+                nameInput.value = '';
+                phoneInput.value = '';
+                whatsappInput.value = '';
+                provinceSelect.value = '';
+                addressTextarea.value = '';
+                if(notesTextarea) notesTextarea.value = '';
+
+                closeCart();
+            } catch (err) {
+                console.error("Order error:", err);
+                alert("عذراً، حدث خطأ أثناء إرسال الطلب: " + err.message);
+            } finally {
+                // إعادة الزر لحالته الطبيعية
+                confirmBtn.disabled = false;
+                confirmBtn.innerHTML = 'تأكيد الطلب <i class="bi bi-bag-check-fill"></i>';
+            }
         }
 
         // وظائف الدعم الفني الجديدة
+        let chatSubscription = null;
+
         function showSupport() {
             document.getElementById('support-drawer').classList.add('open');
             document.getElementById('drawer-overlay').classList.add('open');
+
+            const savedPhone = localStorage.getItem('user_chat_phone');
+            const cartPhone = document.getElementById('customer-phone').value.trim();
+            const phoneToUse = savedPhone || cartPhone;
+
+            if (phoneToUse) {
+                document.getElementById('chat-auth-section').style.display = 'none';
+                document.getElementById('chat-body').style.display = 'flex';
+                startChatSync(phoneToUse);
+            } else {
+                document.getElementById('chat-auth-section').style.display = 'block';
+                document.getElementById('chat-body').style.display = 'none';
+            }
         }
 
-        function closeSupport() {
-            document.getElementById('support-drawer').classList.remove('open');
-            document.getElementById('drawer-overlay').classList.remove('open');
+        function identifyChatUser() {
+            const phone = document.getElementById('chat-phone-input').value.trim();
+            if (/^(010|011|012|015)[0-9]{8}$/.test(phone)) {
+                localStorage.setItem('user_chat_phone', phone);
+                showSupport(); // إعادة التشغيل بالهوية الجديدة
+            } else {
+                alert("من فضلكِ أدخلي رقم موبايل مصري صحيح.");
+            }
+        }
+
+        async function startChatSync(phone) {
+            if (chatSubscription) return;
+
+            // تحميل تاريخ الرسائل القديمة
+            const { data } = await _supabase.from('messages')
+                .select('*')
+                .eq('customer_phone', phone)
+                .order('created_at', { ascending: true });
+            
+            if (data && data.length > 0) {
+                document.getElementById('chat-body').innerHTML = '';
+                data.forEach(m => appendMessage(m.text, m.sender === 'user' ? 'user' : 'bot'));
+            }
+
+            // الاشتراك في الرسائل الجديدة لحظياً (Real-time)
+            chatSubscription = _supabase.channel(`user-room-${phone}`)
+                .on('postgres_changes', { 
+                    event: 'INSERT', 
+                    schema: 'public', 
+                    table: 'messages', 
+                    filter: `customer_phone=eq.${phone}` 
+                }, payload => {
+                    if (payload.new.sender === 'admin') {
+                        appendMessage(payload.new.text, 'bot');
+                    }
+                }).subscribe();
+
+            console.log("Subscribed to support chat for:", phone);
         }
 
         // إرسال رسائل سريعة في الشات
         function sendQuickMsg(text) {
-            appendMessage(text, 'user');
-            setTimeout(() => {
-                appendMessage("أبشري، جاري مراجعة حالة طلبك.. من فضلكِ زودينا برقم الموبايل الذي تم تأكيد الطلب به لنتمكن من مساعدتكِ بشكل أسرع. 🌸", 'bot');
-            }, 1000);
+            const input = document.getElementById('chat-input');
+            input.value = text;
+            sendMessage();
         }
 
         // معالجة إرسال الرسائل من العميل
-        function sendMessage() {
+        async function sendMessage() {
             const input = document.getElementById('chat-input');
-            if (!input.value.trim()) return;
-            appendMessage(input.value, 'user');
+            const text = input.value.trim();
+            // جلب الرقم من الذاكرة أو الخانة
+            const savedPhone = localStorage.getItem('user_chat_phone');
+            const cartPhone = document.getElementById('customer-phone') ? document.getElementById('customer-phone').value.trim() : '';
+            const phone = savedPhone || cartPhone;
+
+            if (!text) return;
+            if (!phone) {
+                alert("من فضلكِ أدخلي رقم الموبايل في خانة البيانات أولاً لنتمكن من متابعة شات الدعم معكِ.");
+                showSupport(); // لو مفيش رقم خالص، نرجعه لشاشة إدخال الرقم في الشات
+                return;
+            }
+
+            appendMessage(text, 'user');
             input.value = '';
-            setTimeout(() => {
-                appendMessage("شكراً لتواصلكِ معنا، سيقوم أحد ممثلي خدمة العملاء بالرد عليكِ في أقرب وقت ممكن. ✨", 'bot');
-            }, 1200);
+
+            if (!chatSubscription) startChatSync(phone);
+
+            await _supabase.from('messages').insert([{ 
+                customer_phone: phone, 
+                sender: 'user', 
+                text: text 
+            }]);
         }
 
         // إضافة فقاعة رسالة في واجهة الشات
