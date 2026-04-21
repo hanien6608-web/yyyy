@@ -6,6 +6,8 @@
     <title>يوتوبيا لاند - عالم عشاق الكتب</title>
     <!-- خط كايرو الفخم من جوجل -->
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700&display=swap" rel="stylesheet">
+    <!-- أيقونة الموقع (Favicon) -->
+    <link rel="icon" type="image/png" href="https://ywbmamklqyrahwqifqdj.supabase.co/storage/v1/object/public/books-images/oo.jpg">
     <!-- مكتبة Supabase للتعامل مع قاعدة البيانات -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <!-- مكتبة أيقونات Bootstrap -->
@@ -32,9 +34,10 @@
             transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1); 
         }
 
-        body { /* إعدادات جسم الصفحة والخط */
+        body {
             font-family: 'Cairo', sans-serif;
             background-color: #000;
+            height: 100%;
             /* جعل الخلفية موحدة وثابتة للموقع بالكامل */
             background-image: var(--library-bg);
             background-size: cover;
@@ -71,13 +74,18 @@
             align-items: center;
         }
 
-        .logo { /* تنسيق شعار الموقع */
+        /* --- تنسيق اللوجو الفخم (نص فقط) كما طلبتِ --- */
+        .logo-wrapper { cursor: pointer; display: inline-block; }
+        .logo-text {
             font-size: 1.8rem;
             font-weight: bold;
             color: var(--paper-light);
             letter-spacing: 2px;
             text-shadow: 0 0 15px rgba(255, 255, 255, 0.2);
+            font-family: 'Cairo', sans-serif;
+            transition: 0.3s;
         }
+        .logo-wrapper:hover .logo-text { color: var(--accent-wood); text-shadow: 0 0 25px var(--accent-wood); }
 
         /* مربع البحث الفخم بنفس فكرة الموبايل */
         .search-container {
@@ -1111,6 +1119,24 @@
         }
         .chat-body::-webkit-scrollbar { display: none; }
 
+        /* تنسيق زر إنهاء الدردشة الاحترافي (نفس روح أزرار الأدمن) */
+        .end-chat-btn-new {
+            background: #d4a373;
+            color: #1a140f;
+            border: none;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 0.7rem;
+            cursor: pointer;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            transition: 0.3s;
+        }
+        .end-chat-btn-new:hover { background: #e74c3c; color: white; transform: scale(1.05); }
+        .end-chat-btn-new i { font-size: 0.9rem; }
+
         .msg {
             padding: 12px 16px;
             border-radius: 18px;
@@ -1144,37 +1170,31 @@
         /* --- تنسيقات زر الإرسال في شات الدعم الفني (الطيارة الورقية) --- */
         .chat-send-btn {
             position: absolute;
-            left: 10px; /* تحريك الزر لليمين قليلاً ليكون متوازناً بصرياً */
+            left: 8px;
             right: auto;
-            background: var(--accent-wood); /* خلفية ذهبية للزر */
+            background: #d4a373; /* نفس لون زر الأدمن */
+            color: #1a140f;    /* نفس لون نص زر الأدمن */
             border: none;
-            width: auto;
-            min-width: 80px;
-            height: 42px;
-            border-radius: 25px;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
-            gap: 8px;
-            padding: 0 15px;
-            box-shadow: 0 4px 12px rgba(212, 163, 115, 0.3);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
             cursor: pointer;
             transition: 0.3s;
-            z-index: 10; /* لضمان ظهور الزر فوق حقل الكتابة */
             font-weight: bold;
-            color: var(--wood-dark);
+            z-index: 10;
         }
         .chat-send-btn:hover {
-            background: var(--wood-mid);
+            background: #e6d5b8;
             transform: translateY(-2px);
-            box-shadow: 0 6px 15px rgba(212, 163, 115, 0.4);
         }
         .chat-send-btn i {
-            font-size: 1rem; 
-            /* تدوير الطائرة لليسار أفقياً تماماً */
+            font-size: 1.5rem;
             transform: rotate(-90deg);
-            -webkit-text-stroke: 1.5px var(--wood-dark);
-            font-weight: bold;
+            -webkit-text-stroke: 1px #1a140f;
         }
 
         body.cart-open { overflow: hidden; }
@@ -1315,7 +1335,7 @@
         <div class="main-content">
             <header>
                 <div class="top-nav">
-                    <div class="logo" onclick="showCategoriesAndHome()">يوتوبيا لاند</div>
+                    <div class="logo-wrapper" onclick="showCategoriesAndHome()"><div class="logo-text">يوتوبيا لاند</div></div>
                 </div>
                 
                 <div class="search-container">
@@ -1387,14 +1407,14 @@
                     <ul class="social-links">
                         <li><a href="https://facebook.com/u_library" target="_blank"><i class="bi bi-facebook"></i> فيس بوك</a></li>
                         <li><a href="https://wa.me/u_library" target="_blank"><i class="bi bi-whatsapp"></i> واتس آب</a></li>
-                        <li><a href="admin.html" style="font-size: 0.8rem; opacity: 0.7;"><i class="bi bi-gear"></i> إدارة</a></li>
                     </ul>
                 </div>
             </footer>
         </div>
     </div>
 
-    <div id="drawer-overlay" class="drawer-overlay" onclick="closeCart()"></div>
+    <div id="drawer-overlay" class="drawer-overlay" onclick="closeCart(); closeSupport();"></div>
+
     <div id="cart-drawer" class="cart-drawer">
         <div class="cart-header">
             <h3>تأكيد طلبك <i class="bi bi-bag-check-fill"></i></h3> <!-- أيقونة جديدة أكثر امتلاءً -->
@@ -1467,7 +1487,7 @@
         <div class="cart-header">
             <h3 style="font-size: 1.1rem;">مركز الدعم <i class="bi bi-headset"></i></h3>
             <div style="display: flex; gap: 10px; align-items: center;">
-                <button id="end-chat-btn" style="display: none; background: rgba(231, 76, 60, 0.2); color: #e74c3c; border: 1px solid #e74c3c; padding: 4px 10px; border-radius: 8px; font-size: 0.7rem; cursor: pointer; font-weight: bold;" onclick="endChat()">إنهاء الدردشة</button>
+                <button id="end-chat-btn" class="end-chat-btn-new" style="display: none;" onclick="endChat()"><i class="bi bi-box-arrow-right"></i> إنهاء الدردشة</button>
                 <span class="close-drawer" onclick="closeSupport()"><i class="bi bi-x-lg"></i></span>
             </div>
         </div>
@@ -1486,9 +1506,9 @@
             <button class="quick-btn" onclick="sendQuickMsg('الأوردر بتاعي لسه موصلش؟ 🚚')">الأوردر بتاعي لسه موصلش؟ 🚚</button>
         </div>
         <div class="input-group">
-            <input type="text" id="chat-input" placeholder="اكتبي استفسارك هنا..." style="padding-left: 120px;">
+            <input type="text" id="chat-input" placeholder="اكتبي استفسارك هنا..." style="padding-left: 65px;">
             <button class="chat-send-btn" onclick="sendMessage()">
-                <i class="bi bi-send-fill"></i> إرسال
+                <i class="bi bi-send-fill"></i>
             </button>
         </div>
     </div>
@@ -1587,6 +1607,54 @@
             document.getElementById('chat-input').addEventListener('keypress', function(e) {
                 if (e.key === 'Enter') sendMessage();
             });
+        });
+
+        // --- نظام الملاحة الذكي (الرجوع للخلف) ---
+        // هذه الوظيفة تراقب ضغط زر الرجوع في المتصفح أو الهاتف
+        window.addEventListener('popstate', function(event) {
+            const state = event.state || { view: 'home' };
+            
+            // إغلاق كل النوافذ المفتوحة فوراً عند الرجوع
+            document.querySelectorAll('.open, .active').forEach(el => {
+                if (el.id === 'cart-drawer' || el.id === 'support-drawer' || el.id === 'drawer-overlay' || el.id === 'book-details-page') {
+                    el.classList.remove('open', 'active');
+                }
+            });
+            document.body.classList.remove('lock-scroll');
+            document.documentElement.classList.remove('lock-scroll');
+
+            // فتح الحالة المطلوبة بناءً على التاريخ (الرجوع أو التقديم)
+            if (state.view === 'cart') openCart(false);
+            else if (state.view === 'support') showSupport(false);
+            else if (state.view === 'wishlist') showWishlist(false);
+            else if (state.view === 'details' && state.id) showBookDetails(state.id, false);
+            else if (state.view === 'home') {
+                // العودة للرئيسية وإعادة ضبط شكل الفوتر والبحث
+                showCategoriesAndHome(false);
+            }
+        });
+
+        // تثبيت الحالة الأولية عند تحميل الصفحة
+        window.addEventListener('load', () => {
+            if (!window.history.state) {
+                window.history.replaceState({ view: 'home' }, "");
+            }
+        });
+
+        // وظيفة مساعدة لإضافة حالة في تاريخ المتصفح عند فتح أي نافذة
+        function pushNavigationState(stateName, extraData = {}) {
+            const state = { view: stateName, ...extraData };
+            const currentState = window.history.state;
+            
+            // منع تكرار نفس الحالة في التاريخ
+            if (!currentState || currentState.view !== stateName || (stateName === 'details' && currentState.id !== extraData.id)) {
+                window.history.pushState(state, "");
+            }
+        }
+
+        // تثبيت الحالة الأولية عند تحميل الموقع
+        window.addEventListener('load', () => {
+            if (!window.history.state) window.history.replaceState({ view: 'home' }, "");
         });
 
         // وظيفة فتح/إغلاق المربع الصغير من الشريط السفلي
@@ -1810,7 +1878,7 @@
         }
 
         // وظيفة فتح صفحة تفاصيل الكتاب (تم تصحيح تعريف المتغيرات)
-        function showBookDetails(id) {
+        function showBookDetails(id, shouldPush = true) {
             // البحث عن الكتاب مع التأكد من مطابقة الأنواع (String)
             const book = window.fullData.find(b => String(b.id) === String(id));
             if (!book) return;
@@ -1908,7 +1976,9 @@
             // تفعيل الانميشن
             setTimeout(() => detailsPage.classList.add('active'), 10);
             
-            document.body.style.overflow = 'hidden'; // منع التمرير في الخلفية
+            document.body.classList.add('lock-scroll');
+            document.documentElement.classList.add('lock-scroll');
+            if (shouldPush) pushNavigationState('details', { id: book.id });
             
             // التأكد من العودة للأعلى عند فتح كتاب جديد
             detailsPage.scrollTo(0,0);
@@ -1966,15 +2036,21 @@
             if (qtyDisplay) qtyDisplay.innerText = currentDetailsQty;
         }
 
-        function closeBookDetails() {
+        function closeBookDetails(shouldGoBack = true) {
             const detailsPage = document.getElementById('book-details-page');
+            if (!detailsPage.classList.contains('active')) return;
+
             detailsPage.classList.remove('active');
             // الانتظار حتى ينتهي الانميشن قبل الإخفاء التام
             setTimeout(() => {
                 detailsPage.style.display = 'none';
                 window.currentOpenedBookId = null; // تنظيف الـ ID عند الإغلاق
             }, 500);
-            document.body.style.overflow = 'auto';
+            document.body.classList.remove('lock-scroll');
+            document.documentElement.classList.remove('lock-scroll');
+            
+            // إذا تم الإغلاق يدوياً (بالزر)، نرجع الحالة في التاريخ خطوة
+            if (shouldGoBack && window.history.state?.view === 'details') window.history.back();
         }
 
         function updateDetailsWishBtn(id) {
@@ -2323,7 +2399,7 @@
         }
 
         // عرض صفحة المفضلة فقط
-        function showWishlist() {
+        function showWishlist(shouldPush = true) {
             currentView = 'wishlist';
             wishlistNewCount = 0; // تصفير العداد عند الدخول
             localStorage.setItem('wishlistNewCount', 0);
@@ -2333,12 +2409,14 @@
             document.querySelectorAll('.bottom-bar-item').forEach(i => i.classList.remove('active'));
             document.getElementById('wishlist-tab').classList.add('active');
             
+            if (shouldPush) pushNavigationState('wishlist');
+
             const filtered = window.fullData.filter(b => wishlist.includes(b.id));
             renderBooksList(filtered);
         }
 
         // العودة للرئيسية وإعادة ضبط الفلاتر
-        function showCategoriesAndHome() {
+        function showCategoriesAndHome(shouldPush = true) {
             currentView = 'home';
             
             // إغلاق أي نوافذ أو دراورات مفتوحة
@@ -2361,22 +2439,29 @@
             document.querySelectorAll('.bottom-bar-item').forEach(i => i.classList.remove('active'));
             document.getElementById('categories-bottom-tab').classList.add('active');
 
+            if (shouldPush) pushNavigationState('home');
+
             // عرض كل البيانات والعودة للقمة
             renderBooksList(window.fullData);
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
 
-        function openCart() {
+        function openCart(shouldPush = true) {
             document.getElementById('cart-drawer').classList.add('open');
             document.getElementById('drawer-overlay').classList.add('open');
-            document.body.classList.add('cart-open');
+            document.body.classList.add('lock-scroll');
+            document.documentElement.classList.add('lock-scroll');
+            if (shouldPush) pushNavigationState('cart');
             updateCartUI(); // تحديث فوري للتأكد من حالة السلة (فارغة أو ممتلئة)
         }
 
-        function closeCart() {
+        function closeCart(shouldGoBack = true) {
+            if (!document.getElementById('cart-drawer').classList.contains('open')) return;
             document.getElementById('cart-drawer').classList.remove('open');
             document.getElementById('drawer-overlay').classList.remove('open');
-            document.body.classList.remove('cart-open');
+            document.body.classList.remove('lock-scroll');
+            document.documentElement.classList.remove('lock-scroll');
+            if (shouldGoBack && window.history.state?.view === 'cart') window.history.back();
         }
 
         function shopNow() {
@@ -2528,9 +2613,13 @@
         function showSupport() {
             document.getElementById('support-drawer').classList.add('open');
             document.getElementById('drawer-overlay').classList.add('open');
+            document.body.classList.add('lock-scroll');
+            document.documentElement.classList.add('lock-scroll');
+            pushNavigationState('support');
 
             const savedPhone = localStorage.getItem('user_chat_phone');
-            const cartPhone = document.getElementById('customer-phone').value.trim();
+            const cartPhoneInput = document.getElementById('customer-phone');
+            const cartPhone = cartPhoneInput ? cartPhoneInput.value.trim() : '';
             const phoneToUse = savedPhone || cartPhone;
 
             if (phoneToUse) {
@@ -2543,6 +2632,15 @@
                 document.getElementById('end-chat-btn').style.display = 'none';
                 document.getElementById('chat-body').style.display = 'none';
             }
+        }
+
+        function closeSupport(shouldGoBack = true) {
+            if (!document.getElementById('support-drawer').classList.contains('open')) return;
+            document.getElementById('support-drawer').classList.remove('open');
+            document.getElementById('drawer-overlay').classList.remove('open');
+            document.body.classList.remove('lock-scroll');
+            document.documentElement.classList.remove('lock-scroll');
+            if (shouldGoBack && window.history.state?.view === 'support') window.history.back();
         }
 
         function identifyChatUser() {
@@ -2588,8 +2686,10 @@
                     schema: 'public',
                     table: 'messages'
                 }, () => {
-                    // مسح الشات فوراً عند الحذف من الأدمن
-                    document.getElementById('chat-body').innerHTML = '<div class="msg msg-bot">تبدأ محادثة جديدة الآن... ✨</div>';
+                    document.getElementById('chat-body').innerHTML = '<div class="msg msg-bot" style="opacity:0.6;">تم تنظيف المحادثة... ✨</div>';
+                })
+                .on('broadcast', { event: 'delete_chat' }, () => {
+                    document.getElementById('chat-body').innerHTML = '';
                 })
                 .on('broadcast', { event: 'msg' }, payload => {
                     if (payload.payload.sender === 'admin') {
