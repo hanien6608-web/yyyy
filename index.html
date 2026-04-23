@@ -1560,7 +1560,37 @@
         </div>
     </div>
 
+    <!-- شريط تثبيت التطبيق التلقائي -->
+    <div id="install-banner" style="display: none; position: fixed; top: 0; left: 0; width: 100%; background: var(--accent-wood); color: var(--wood-dark); padding: 15px; z-index: 999999; justify-content: space-between; align-items: center; font-weight: bold; box-shadow: 0 4px 15px rgba(0,0,0,0.5); animation: fadeInUp 0.5s ease;">
+        <div style="display: flex; align-items: center; gap: 10px;">
+            <img src="https://ywbmamklqyrahwqifqdj.supabase.co/storage/v1/object/public/books-images/oo.jpg" style="width: 40px; height: 40px; border-radius: 8px; object-fit: cover;">
+            <span>ثبتي تطبيق يوتوبيا لاند الآن ✨</span>
+        </div>
+        <div style="display: flex; gap: 10px;">
+            <button onclick="triggerInstall()" style="background: var(--wood-dark); color: white; border: none; padding: 8px 20px; border-radius: 8px; font-weight: 900; cursor: pointer;">تثبيت</button>
+            <button onclick="this.parentElement.parentElement.style.display='none'" style="background: none; border: none; font-size: 1.2rem; cursor: pointer;">✕</button>
+        </div>
+    </div>
+
     <script>
+        let deferredPrompt;
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            document.getElementById('install-banner').style.display = 'flex';
+        });
+
+        async function triggerInstall() {
+            if (deferredPrompt) {
+                deferredPrompt.prompt();
+                const { outcome } = await deferredPrompt.userChoice;
+                if (outcome === 'accepted') {
+                    document.getElementById('install-banner').style.display = 'none';
+                }
+                deferredPrompt = null;
+            }
+        }
+
         // تسجيل الـ Service Worker لتفعيل خاصية تثبيت "يوتوبيا لاند" كتطبيق
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
