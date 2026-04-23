@@ -8,6 +8,10 @@
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap" rel="stylesheet">
     <!-- أيقونة الموقع (Favicon) -->
     <link rel="icon" type="image/jpeg" href="https://ywbmamklqyrahwqifqdj.supabase.co/storage/v1/object/public/books-images/oo.jpg?v=3">
+    <!-- PWA Setup -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#2c1b10">
+    <link rel="apple-touch-icon" href="https://ywbmamklqyrahwqifqdj.supabase.co/storage/v1/object/public/books-images/oo.jpg">
     <!-- مكتبة Supabase للتعامل مع قاعدة البيانات -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <!-- مكتبة أيقونات Bootstrap -->
@@ -1556,6 +1560,15 @@
     </div>
 
     <script>
+        // تسجيل الـ Service Worker لتفعيل خاصية تثبيت "يوتوبيا لاند" كتطبيق
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('sw.js')
+                    .then(reg => console.log('Utopia Worker Registered'))
+                    .catch(err => console.log('Registration failed'));
+            });
+        }
+
         // إعدادات الربط مع Supabase
         const supabaseUrl = 'https://ywbmamklqyrahwqifqdj.supabase.co';
         const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl3Ym1hbWtscXlyYWh3cWlmcWRqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU0ODAzOTksImV4cCI6MjA5MTA1NjM5OX0.Dw3-6ZwoADEN6H0eaG_XhwM01t6v5mpXzst19LDf9es'; 
