@@ -2,23 +2,25 @@
   "name": "يوتوبيا لاند - Utopia Land",
   "short_name": "يوتوبيا لاند",
   "description": "يوتوبيا لاند - عالم عشاق الكتب",
+  "id": "utopia-land-pwa",
   "start_url": "./index.html",
+  "scope": "./",
   "display": "standalone",
   "orientation": "portrait",
   "background_color": "#2c1b10",
-  "theme_color": "#d4a373",
+  "theme_color": "#2c1b10",
   "icons": [
     {
       "src": "https://ywbmamklqyrahwqifqdj.supabase.co/storage/v1/object/public/books-images/oo.jpg",
       "sizes": "192x192",
       "type": "image/jpeg",
-      "purpose": "any maskable"
+      "purpose": "any"
     },
     {
       "src": "https://ywbmamklqyrahwqifqdj.supabase.co/storage/v1/object/public/books-images/oo.jpg",
       "sizes": "512x512",
       "type": "image/jpeg",
-      "purpose": "any maskable"
+      "purpose": "any"
     }
   ]
 }
