@@ -7,7 +7,8 @@
     <!-- خط كايرو الفخم من جوجل -->
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap" rel="stylesheet">
     <!-- أيقونة الموقع (Favicon) -->
-    <link rel="icon" type="image/jpeg" href="https://ywbmamklqyrahwqifqdj.supabase.co/storage/v1/object/public/books-images/oo.jpg?v=3">
+    <link rel="shortcut icon" href="https://ywbmamklqyrahwqifqdj.supabase.co/storage/v1/object/public/books-images/oo.jpg?v=4">
+    <link rel="icon" type="image/jpeg" href="https://ywbmamklqyrahwqifqdj.supabase.co/storage/v1/object/public/books-images/oo.jpg?v=4">
     <!-- PWA Setup -->
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#2c1b10">
@@ -1581,12 +1582,14 @@
         let supportNewCount = parseInt(localStorage.getItem('supportNewCount')) || 0; // عداد رسائل الدعم الجديدة مع حفظ الحالة
         let currentView = 'home'; // العرض الحالي (الرئيسية أو المفضلة)
         
-        // تعريف صوت الشات
+        // تعريف وتحميل صوت الشات مسبقاً
         const chatSound = new Audio('https://ywbmamklqyrahwqifqdj.supabase.co/storage/v1/object/public/books-images/iphone-notification-ringtone-838.mp3');
-        
+        chatSound.load();
+
         // تفعيل الصوت عند أول نقرة (متطلبات الأمان للمتصفح)
         document.addEventListener('click', () => {
-            chatSound.muted = true; chatSound.play().then(() => { chatSound.pause(); chatSound.muted = false; }).catch(()=>{});
+            chatSound.muted = true; 
+            chatSound.play().then(() => { chatSound.pause(); chatSound.currentTime = 0; chatSound.muted = false; }).catch(()=>{});
         }, { once: true });
 
         // حاول تحميل السلة من LocalStorage عند بدء التشغيل
