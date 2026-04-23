@@ -5,9 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>يوتوبيا لاند - عالم عشاق الكتب</title>
     <!-- خط كايرو الفخم من جوجل -->
-    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap" rel="stylesheet">
     <!-- أيقونة الموقع (Favicon) -->
-    <link rel="icon" type="image/png" href="https://ywbmamklqyrahwqifqdj.supabase.co/storage/v1/object/public/books-images/oo.jpg">
+    <link rel="icon" type="image/jpeg" href="https://ywbmamklqyrahwqifqdj.supabase.co/storage/v1/object/public/books-images/oo.jpg?v=3">
     <!-- مكتبة Supabase للتعامل مع قاعدة البيانات -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <!-- مكتبة أيقونات Bootstrap -->
@@ -1121,20 +1121,27 @@
 
         /* تنسيق زر إنهاء الدردشة الاحترافي (نفس روح أزرار الأدمن) */
         .end-chat-btn-new {
-            background: #d4a373;
-            color: #1a140f;
-            border: none;
-            padding: 5px 12px;
-            border-radius: 20px;
-            font-size: 0.7rem;
+            background: #d4a373; /* اللون الخشبي في الحالة العادية */
+            color: #1a140f; /* لون نص داكن ليتناسب مع الخشب */
+            border: 1px solid #bc8a5f;
+            padding: 6px 15px;
+            border-radius: 10px;
+            font-size: 0.8rem;
             cursor: pointer;
             font-weight: bold;
             display: flex;
             align-items: center;
-            gap: 5px;
-            transition: 0.3s;
+            gap: 8px;
+            transition: 0.4s ease; /* انسيابية في قلب الألوان */
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
         }
-        .end-chat-btn-new:hover { background: #e74c3c; color: white; transform: scale(1.05); }
+        /* يقلب للون النبيتي الملكي (الاحترافي) أول ما يقف عليه الماوس أو يتم الضغط عليه */
+        .end-chat-btn-new:hover { 
+            background: linear-gradient(135deg, #800000, #4d0000); 
+            color: #ffffff;
+            border-color: #a52a2a;
+            box-shadow: 0 4px 15px rgba(128, 0, 0, 0.5);
+        }
         .end-chat-btn-new i { font-size: 0.9rem; }
 
         .msg {
@@ -1295,9 +1302,41 @@
             from { opacity: 0; transform: translateY(20px); }
             to { opacity: 1; transform: translateY(0); }
         }
+
+        /* تنسيق زر العودة للأعلى الاحترافي (بنفس ستايل نجاح الإضافة للسلة) */
+        .scroll-top-btn {
+            position: fixed;
+            bottom: 100px; /* يظهر فوق البار السفلي بمسافة مريحة */
+            right: 20px;
+            width: 50px;
+            height: 50px;
+            background: var(--accent-wood);
+            color: var(--wood-dark);
+            border: 2px solid var(--paper-light);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.6rem;
+            cursor: pointer;
+            box-shadow: 0 0 20px rgba(212, 163, 115, 0.6);
+            z-index: 9998;
+            opacity: 0;
+            visibility: hidden;
+            transition: 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            transform: scale(0.5) translateY(30px);
+        }
+        .scroll-top-btn.visible { opacity: 1; visibility: visible; transform: scale(1) translateY(0); }
+        .scroll-top-btn i { -webkit-text-stroke: 2px var(--wood-dark); } /* سهم سميك جداً كما طلبتِ */
+        .scroll-top-btn:hover { background: var(--paper-light); transform: scale(1.1) translateY(-5px); box-shadow: 0 0 30px var(--accent-wood); }
     </style>
 </head>
 <body>
+    <!-- زر العودة للأعلى -->
+    <button id="scroll-top-btn" class="scroll-top-btn" onclick="scrollToTop()" title="العودة للقمة">
+        <i class="bi bi-arrow-up"></i>
+    </button>
+
     <!-- الشريط العلوي الثابت (يظهر عند السكرول) -->
     <div id="sticky-header" class="sticky-top-header">
         <div class="sticky-logo" onclick="showCategoriesAndHome()" style="cursor:pointer;">يوتوبيا لاند</div>
@@ -1394,8 +1433,11 @@
                     </span>
                     <span>المفضلة</span>
                 </div>
-                <div class="bottom-bar-item" onclick="showSupport()">
-                    <span class="bar-icon"><i class="bi bi-headset"></i></span>
+                <div class="bottom-bar-item" id="support-tab" onclick="showSupport()">
+                    <span class="bar-icon">
+                        <i class="bi bi-headset"></i>
+                        <span id="global-support-count" class="global-wish-badge">0</span>
+                    </span>
                     <span>الدعم</span>
                 </div>
             </div>
@@ -1523,7 +1565,16 @@
         let cart = []; // مصفوفة لتخزين عناصر السلة
         let wishlist = JSON.parse(localStorage.getItem('wishlist')) || []; // قائمة المفضلة من التخزين المحلي
         let wishlistNewCount = parseInt(localStorage.getItem('wishlistNewCount')) || 0; // عداد المفضلة الجديد
+        let supportNewCount = parseInt(localStorage.getItem('supportNewCount')) || 0; // عداد رسائل الدعم الجديدة مع حفظ الحالة
         let currentView = 'home'; // العرض الحالي (الرئيسية أو المفضلة)
+        
+        // تعريف صوت الشات
+        const chatSound = new Audio('https://ywbmamklqyrahwqifqdj.supabase.co/storage/v1/object/public/books-images/iphone-notification-ringtone-838.mp3');
+        
+        // تفعيل الصوت عند أول نقرة (متطلبات الأمان للمتصفح)
+        document.addEventListener('click', () => {
+            chatSound.muted = true; chatSound.play().then(() => { chatSound.pause(); chatSound.muted = false; }).catch(()=>{});
+        }, { once: true });
 
         // حاول تحميل السلة من LocalStorage عند بدء التشغيل
         try {
@@ -1583,11 +1634,24 @@
             updateGlobalCartCount(); // تحديث عداد السلة عند تحميل الصفحة
             updateGlobalWishCount(); // تحديث عداد المفضلة
             
-            // مراقب السكرول لإظهار الشريط العلوي الثابت
+            // تفعيل المزامنة الخلفية للشات إذا كان المستخدم معروفاً
+            const savedPhone = localStorage.getItem('user_chat_phone');
+            updateGlobalSupportCount();
+            if (savedPhone) startChatSync(savedPhone);
+            
+            // مراقب السكرول لإظهار الشريط العلوي الثابت وزر العودة للأعلى
             window.addEventListener('scroll', () => {
                 const stickyHeader = document.getElementById('sticky-header');
+                const scrollBtn = document.getElementById('scroll-top-btn');
                 const triggerArea = document.querySelector('.categories-container');
                 if (!triggerArea || !stickyHeader) return;
+
+                // إظهار زر العودة للأعلى بعد نزول 400 بيكسل
+                if (window.scrollY > 400) {
+                    scrollBtn.classList.add('visible');
+                } else {
+                    scrollBtn.classList.remove('visible');
+                }
                 
                 const rect = triggerArea.getBoundingClientRect();
                 if (window.scrollY > 150 || rect.top <= 0) {
@@ -1608,6 +1672,11 @@
                 if (e.key === 'Enter') sendMessage();
             });
         });
+
+        // وظيفة العودة للقمة بانسيابية
+        function scrollToTop() {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
 
         // --- نظام الملاحة الذكي (الرجوع للخلف) ---
         // هذه الوظيفة تراقب ضغط زر الرجوع في المتصفح أو الهاتف
@@ -2398,6 +2467,17 @@
             }
         }
 
+        // تحديث عداد الدعم (الإشعار الأحمر)
+        function updateGlobalSupportCount() {
+            const el = document.getElementById('global-support-count');
+            if (!el) return;
+            el.innerText = supportNewCount;
+            el.style.display = (supportNewCount > 0) ? 'flex' : 'none';
+            // نؤكد على اللون الذهبي (نفس المفضلة) لضمان عدم ظهوره بالأحمر
+            el.style.backgroundColor = "var(--accent-wood)";
+            el.style.color = "var(--wood-dark)";
+        }
+
         // عرض صفحة المفضلة فقط
         function showWishlist(shouldPush = true) {
             currentView = 'wishlist';
@@ -2615,6 +2695,14 @@
             document.getElementById('drawer-overlay').classList.add('open');
             document.body.classList.add('lock-scroll');
             document.documentElement.classList.add('lock-scroll');
+            
+            // تصفير الإشعارات عند فتح الدعم
+            supportNewCount = 0;
+            localStorage.setItem('supportNewCount', 0);
+            updateGlobalSupportCount();
+            
+            document.querySelectorAll('.bottom-bar-item').forEach(i => i.classList.remove('active'));
+            document.getElementById('support-tab').classList.add('active');
             pushNavigationState('support');
 
             const savedPhone = localStorage.getItem('user_chat_phone');
@@ -2677,7 +2765,15 @@
                     table: 'messages', 
                     filter: `customer_phone=eq.${phone}` 
                 }, payload => {
-                    if (payload.new.sender === 'admin' && payload.new.text !== lastReceivedMsg) {
+                    if (payload.eventType === 'INSERT' && payload.new.sender === 'admin') {
+                        const isSupportOpen = document.getElementById('support-drawer').classList.contains('open');
+                        if (!isSupportOpen) {
+                            supportNewCount++;
+                            localStorage.setItem('supportNewCount', supportNewCount);
+                            updateGlobalSupportCount();
+                        }
+                        chatSound.currentTime = 0;
+                        chatSound.play().catch(e => console.log('اضغطي في أي مكان لتفعيل الصوت'));
                         appendMessage(payload.new.text, 'bot');
                     }
                 })
