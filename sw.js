@@ -2,7 +2,7 @@ const CACHE_NAME = 'utopia-v1';
 const assets = [
   './index.html',
   './manifest.json',
-  'https://ywbmamklqyrahwqifqdj.supabase.co/storage/v1/object/public/books-images/oo.jpg'
+  'https://ywbmamklqyrahwqifqdj.supabase.co/storage/v1/object/public/books-images/remove-photos-background-removed.png'
 ];
 
 self.addEventListener('install', (event) => {
