@@ -1,4 +1,4 @@
-const CACHE_NAME = 'utopia-v1';
+const CACHE_NAME = 'utopia-v2';
 const assets = [
   './index.html',
   './manifest.json',
