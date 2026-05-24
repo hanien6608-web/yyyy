@@ -160,14 +160,22 @@ function scrollToTop() {
 window.addEventListener('popstate', function(event) {
     const state = event.state || { view: 'home' };
     
-    // إغلاق كل النوافذ المفتوحة فوراً عند الرجوع
-    document.querySelectorAll('.open, .active').forEach(el => {
-        if (el.id === 'cart-drawer' || el.id === 'support-drawer' || el.id === 'drawer-overlay' || el.id === 'book-details-page') {
+    // التحقق من وجود نوافذ مفتوحة وإغلاقها
+    const activeModals = ['cart-drawer', 'support-drawer', 'book-details-page', 'drawer-overlay'];
+    let closedSomething = false;
+
+    activeModals.forEach(id => {
+        const el = document.getElementById(id);
+        if (el && (el.classList.contains('open') || el.classList.contains('active'))) {
             el.classList.remove('open', 'active');
+            closedSomething = true;
         }
     });
-    document.body.classList.remove('lock-scroll');
-    document.documentElement.classList.remove('lock-scroll');
+
+    if (closedSomething) {
+        document.body.classList.remove('lock-scroll');
+        document.documentElement.classList.remove('lock-scroll');
+    }
 
     // فتح الحالة المطلوبة بناءً على التاريخ (الرجوع أو التقديم)
     if (state.view === 'cart') openCart(false);
@@ -903,9 +911,7 @@ async function startChatSync(phone) {
                 appendMessage(payload.payload.text, 'admin'); // تم تعديل payload.new.text إلى payload.payload.text
                 
                 // إظهار إشعار لو الصفحة مقفولة أو في الخلفية
-                if (document.visibilityState !== 'visible') {
-                    new Notification("يوتوبيا لاند", { body: "لديكِ رسالة جديدة من الدعم الفني ✨", icon: "https://ywbmamklqyrahwqifqdj.supabase.co/storage/v1/object/public/books-images/55555.jpg" });
-                }
+                triggerBrowserNotification(payload.payload.text);
             } 
         })
         .on('broadcast', { event: 'typing' }, payload => {
@@ -953,6 +959,16 @@ async function sendMessage() {
 
     appendMessage(text, 'user'); input.value = '';
     await _supabase.from('messages').insert([{ customer_phone: phone, sender: 'user', text: text }]);
+}
+
+// وظيفة إرسال إشعار للمتصفح مثل الواتساب
+function triggerBrowserNotification(messageText) {
+    if (Notification.permission === 'granted' && (document.hidden || document.visibilityState !== 'visible' || !document.getElementById('support-drawer').classList.contains('open'))) {
+        new Notification("يوتوبيا لاند - رسالة جديدة", {
+            body: messageText,
+            icon: "https://ywbmamklqyrahwqifqdj.supabase.co/storage/v1/object/public/books-images/55555.jpg"
+        });
+    }
 }
 
 function appendMessage(text, side) {
