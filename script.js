@@ -116,6 +116,11 @@ document.addEventListener('DOMContentLoaded', () => {
     updateGlobalSupportCount();
     if (savedPhone) startChatSync(savedPhone);
     
+    // ضمان وجود حالة "الرئيسية" في التاريخ فور فتح الموقع لمنع الخروج المفاجئ
+    if (!window.history.state || window.history.state.view !== 'home') {
+        window.history.replaceState({ view: 'home' }, "");
+    }
+
     // مراقب السكرول لإظهار الشريط العلوي الثابت وزر العودة للأعلى
     window.addEventListener('scroll', () => {
         const stickyHeader = document.getElementById('sticky-header');
@@ -962,12 +967,23 @@ async function sendMessage() {
 }
 
 // وظيفة إرسال إشعار للمتصفح مثل الواتساب
-function triggerBrowserNotification(messageText) {
-    if (Notification.permission === 'granted' && (document.hidden || document.visibilityState !== 'visible' || !document.getElementById('support-drawer').classList.contains('open'))) {
-        new Notification("يوتوبيا لاند - رسالة جديدة", {
+async function triggerBrowserNotification(messageText) {
+    if (Notification.permission === 'granted') {
+        const options = {
             body: messageText,
-            icon: "https://ywbmamklqyrahwqifqdj.supabase.co/storage/v1/object/public/books-images/55555.jpg"
-        });
+            icon: "https://ywbmamklqyrahwqifqdj.supabase.co/storage/v1/object/public/books-images/55555.jpg",
+            badge: "https://ywbmamklqyrahwqifqdj.supabase.co/storage/v1/object/public/books-images/55555.jpg",
+            vibrate: [200, 100, 200],
+            tag: 'new-message', // تجميع الإشعارات المتكررة
+            renotify: true
+        };
+
+        if ('serviceWorker' in navigator) {
+            const reg = await navigator.serviceWorker.ready;
+            reg.showNotification("يوتوبيا لاند - رسالة جديدة", options);
+        } else {
+            new Notification("يوتوبيا لاند - رسالة جديدة", options);
+        }
     }
 }
 
