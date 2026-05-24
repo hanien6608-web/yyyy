@@ -1,12 +1,11 @@
 // ملف الـ Service Worker للتعامل مع الإشعارات في الخلفية
 self.addEventListener('push', function(event) {
-    const data = event.data ? event.data.json() : { title: 'يوتوبيا لاند', body: 'رسالة جديدة وصلت! ✨' };
+    const data = event.data ? event.data.json() : { title: 'يوتوبيا لاند', body: 'لديكِ تحديث جديد ✨' };
     
     const options = {
         body: data.body,
         icon: 'https://ywbmamklqyrahwqifqdj.supabase.co/storage/v1/object/public/books-images/55555.jpg',
-        // نترك الـ badge فارغاً أو نستخدم أيقونة شفافة تماماً لتجنب المربع الأبيض في أندرويد
-        vibrate: [300, 100, 300, 100, 400], // نمط اهتزاز إيقاعي مميز
+        vibrate: [300, 100, 300, 100, 400],
         tag: 'utopia-chat-msg',
         renotify: true,
         data: { url: self.location.origin }

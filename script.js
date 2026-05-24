@@ -111,11 +111,6 @@ document.addEventListener('DOMContentLoaded', () => {
     updateGlobalCartCount(); // تحديث عداد السلة عند تحميل الصفحة
     updateGlobalWishCount(); // تحديث عداد المفضلة
     
-    // ضمان وجود حالة "الرئيسية" في التاريخ فور فتح الموقع لمنع الخروج المفاجئ
-    if (!window.history.state || window.history.state.view !== 'home') {
-        window.history.replaceState({ view: 'home' }, "");
-    }
-
     // تفعيل المزامنة الخلفية للشات إذا كان المستخدم معروفاً
     const savedPhone = localStorage.getItem('user_chat_phone');
     updateGlobalSupportCount();
@@ -991,11 +986,12 @@ async function triggerBrowserNotification(messageText) {
         const options = {
             body: messageText,
             icon: "https://ywbmamklqyrahwqifqdj.supabase.co/storage/v1/object/public/books-images/55555.jpg",
-            badge: "", // نتركه فارغاً لحل مشكلة المربع الأبيض في أندرويد
+            badge: "", // حذف الرابط لمنع المربع الأبيض
             vibrate: [300, 100, 300, 100, 400], // نفس الاهتزاز المميز
-            tag: 'utopia-chat-msg',
+            tag: 'new-message', // تجميع الإشعارات المتكررة
             renotify: true
         };
+
         if ('serviceWorker' in navigator) {
             const reg = await navigator.serviceWorker.ready;
             reg.showNotification("يوتوبيا لاند - رسالة جديدة", options);
