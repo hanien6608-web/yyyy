@@ -12,7 +12,7 @@
   "icons": [
     {
       "src": "https://ywbmamklqyrahwqifqdj.supabase.co/storage/v1/object/public/books-images/remove-photos-background-removed.png",
-      "sizes": "192x192",
+      "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"
     },

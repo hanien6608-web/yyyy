@@ -1,26 +1,23 @@
-const CACHE_NAME = 'utopia-v2';
-const assets = [
-  './index.html',
-  './manifest.json',
-  'https://ywbmamklqyrahwqifqdj.supabase.co/storage/v1/object/public/books-images/remove-photos-background-removed.png'
-];
+// ملف الـ Service Worker للتعامل مع الإشعارات في الخلفية
+self.addEventListener('push', function(event) {
+    const data = event.data ? event.data.json() : { title: 'يوتوبيا لاند', body: 'لديكِ تحديث جديد ✨' };
+    
+    const options = {
+        body: data.body,
+        icon: 'https://ywbmamklqyrahwqifqdj.supabase.co/storage/v1/object/public/books-images/55555.png',
+        badge: 'https://ywbmamklqyrahwqifqdj.supabase.co/storage/v1/object/public/books-images/55555.png',
+        vibrate: [100, 50, 100],
+        data: { url: self.location.origin }
+    };
 
-self.addEventListener('install', (event) => {
-  event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(assets);
-    })
-  );
+    event.waitUntil(
+        self.registration.showNotification(data.title, options)
+    );
 });
 
-self.addEventListener('fetch', (event) => {
-  event.respondWith(
-    caches.match(event.request).then((response) => {
-      return response || fetch(event.request).catch(() => {
-        if (event.request.mode === 'navigate') {
-          return caches.match('./index.html');
-        }
-      });
-    })
-  );
+self.addEventListener('notificationclick', function(event) {
+    event.notification.close();
+    event.waitUntil(
+        clients.openWindow(event.notification.data.url)
+    );
 });
