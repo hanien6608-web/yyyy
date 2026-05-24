@@ -904,7 +904,7 @@ async function startChatSync(phone) {
                 
                 // إظهار إشعار لو الصفحة مقفولة أو في الخلفية
                 if (document.visibilityState !== 'visible') {
-                    new Notification("يوتوبيا لاند", { body: "لديكِ رسالة جديدة من الدعم الفني ✨", icon: "https://ywbmamklqyrahwqifqdj.supabase.co/storage/v1/object/public/books-images/55555.png" });
+                    new Notification("يوتوبيا لاند", { body: "لديكِ رسالة جديدة من الدعم الفني ✨", icon: "https://ywbmamklqyrahwqifqdj.supabase.co/storage/v1/object/public/books-images/55555.jpg" });
                 }
             } 
         })

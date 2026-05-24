@@ -4,8 +4,8 @@ self.addEventListener('push', function(event) {
     
     const options = {
         body: data.body,
-        icon: 'https://ywbmamklqyrahwqifqdj.supabase.co/storage/v1/object/public/books-images/55555.png',
-        badge: 'https://ywbmamklqyrahwqifqdj.supabase.co/storage/v1/object/public/books-images/55555.png',
+        icon: 'https://ywbmamklqyrahwqifqdj.supabase.co/storage/v1/object/public/books-images/55555.jpg',
+        badge: 'https://ywbmamklqyrahwqifqdj.supabase.co/storage/v1/object/public/books-images/55555.jpg',
         vibrate: [100, 50, 100],
         data: { url: self.location.origin }
     };
