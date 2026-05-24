@@ -116,6 +116,20 @@ document.addEventListener('DOMContentLoaded', () => {
     updateGlobalSupportCount();
     if (savedPhone) startChatSync(savedPhone);
     
+    // فحص إذا كان المستخدم قادماً من إشعار (والموقع كان مغلقاً)
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('openSupport') === 'true') {
+        setTimeout(showSupport, 1000);
+        window.history.replaceState({}, document.title, window.location.pathname);
+    }
+
+    // الاستماع للرسائل القادمة من Service Worker (والموقع كان مفتوحاً)
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.addEventListener('message', (event) => {
+            if (event.data && event.data.action === 'open-support') showSupport();
+        });
+    }
+
     // ضمان وجود حالة "الرئيسية" في التاريخ فور فتح الموقع لمنع الخروج المفاجئ
     if (!window.history.state || window.history.state.view !== 'home') {
         window.history.replaceState({ view: 'home' }, "");
@@ -973,7 +987,7 @@ async function triggerBrowserNotification(messageText) {
             body: messageText,
             icon: "https://ywbmamklqyrahwqifqdj.supabase.co/storage/v1/object/public/books-images/55555.jpg",
             badge: "https://ywbmamklqyrahwqifqdj.supabase.co/storage/v1/object/public/books-images/55555.jpg",
-            vibrate: [200, 100, 200],
+            vibrate: [300, 100, 300, 100, 400], // نفس الاهتزاز المميز
             tag: 'new-message', // تجميع الإشعارات المتكررة
             renotify: true
         };
