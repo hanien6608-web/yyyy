@@ -392,7 +392,7 @@ function renderBookCard(book, index) {
         <div class="book-card" style="animation: fadeInUp ${0.3 + (index * 0.1)}s ease-out;" onclick="showBookDetails('${book.id}')">
             <div class="image-box">
                 ${has2nd ? `<div class="hover-trigger trigger-right"></div><div class="hover-trigger trigger-left"></div>` : ''}
-                <img src="${img1}" class="main-img">
+                <img src="${img1}" class="main-img" loading="lazy"> <!-- تحميل ذكي حسب الصف -->
                 ${has2nd ? `<img src="${img2}" class="hover-img">` : ''}
                 <div class="image-indicators"><div class="dot active"></div>${has2nd ? `<div class="dot"></div>` : ''}</div>
             </div>
@@ -944,30 +944,16 @@ async function startChatSync(phone) {
         .on('broadcast', { event: 'typing' }, payload => {
             if (payload.payload.sender === 'admin') {
                 const indicator = document.getElementById('client-typing-indicator');
-                const header = document.getElementById('client-chat-header');
-                
                 if (indicator) {
                     const isTyping = payload.payload.typing;
                     if (isTyping) {
                         indicator.style.display = 'flex';
-                        
-                        // تحديث العنوان ليظهر أن الأدمن يكتب (مثل واتساب)
-                        if (header && !header.innerText.includes('...')) {
-                            header.dataset.original = header.innerHTML;
-                            header.innerHTML = 'الدعم يكتب الآن... <i class="bi bi-pencil-fill"></i>';
-                            header.style.color = '#2ecc71'; // لون أخضر نشط
-                        }
-
                         const cb = document.getElementById('chat-body');
                         cb.scrollTop = cb.scrollHeight;
                         clearTimeout(typingTimer);
-                        typingTimer = setTimeout(() => { 
-                            indicator.style.display = 'none';
-                            if(header && header.dataset.original) { header.innerHTML = header.dataset.original; header.style.color = ''; }
-                        }, 4000);
+                        typingTimer = setTimeout(() => { indicator.style.display = 'none'; }, 4000);
                     } else {
                         indicator.style.display = 'none';
-                        if(header && header.dataset.original) { header.innerHTML = header.dataset.original; header.style.color = ''; }
                     }
                 }
             }
@@ -1029,7 +1015,38 @@ async function triggerBrowserNotification(messageText) {
     }
 }
 
+// وظيفة مراقبة الكروت لظهورها صف بصف عند السكرول
+function observeBookCards() {
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                entry.target.classList.add('visible');
+            }
+        });
+    }, { threshold: 0.1 });
+
+    document.querySelectorAll('.book-card').forEach(card => observer.observe(card));
+}
+
+// تعديل دالة renderBooksList لتشغيل المراقب
+const originalRenderBooksList = renderBooksList;
+renderBooksList = function(data) {
+    originalRenderBooksList(data);
+    observeBookCards();
+};
+
 function appendMessage(text, side) {
-    const chatBody = document.getElementById('chat-body'); const msgDiv = document.createElement('div');
-    msgDiv.className = `msg msg-${side}`; msgDiv.innerText = text; chatBody.appendChild(msgDiv); chatBody.scrollTop = chatBody.scrollHeight;
+    const chatBody = document.getElementById('chat-body');
+    const indicator = document.getElementById('client-typing-indicator');
+    const msgDiv = document.createElement('div');
+    msgDiv.className = `msg msg-${side}`;
+    msgDiv.innerText = text;
+
+    // ضمان إضافة الرسالة قبل فقاعة "جاري الكتابة" لتبقى الفقاعة دائماً في الأسفل
+    if (indicator) {
+        chatBody.insertBefore(msgDiv, indicator);
+    } else {
+        chatBody.appendChild(msgDiv);
+    }
+    chatBody.scrollTop = chatBody.scrollHeight;
 }
