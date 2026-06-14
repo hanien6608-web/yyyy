@@ -115,9 +115,15 @@ document.addEventListener('DOMContentLoaded', () => {
     const savedPhone = localStorage.getItem('user_chat_phone');
     updateGlobalSupportCount();
     if (savedPhone) startChatSync(savedPhone);
+
+    // فحص الرابط عند التحميل لفتح كتاب معين مباشرة (Deep Linking)
+    const urlParams = new URLSearchParams(window.location.search);
+    const bookId = urlParams.get('id');
+    if (bookId && window.fullData) {
+        setTimeout(() => showBookDetails(bookId, false), 1500); 
+    }
     
     // فحص إذا كان المستخدم قادماً من إشعار (والموقع كان مغلقاً)
-    const urlParams = new URLSearchParams(window.location.search);
     if (urlParams.get('openSupport') === 'true') {
         setTimeout(showSupport, 1000);
         window.history.replaceState({}, document.title, window.location.pathname);
@@ -179,22 +185,10 @@ function scrollToTop() {
 window.addEventListener('popstate', function(event) {
     const state = event.state || { view: 'home' };
     
-    // التحقق من وجود نوافذ مفتوحة وإغلاقها
-    const activeModals = ['cart-drawer', 'support-drawer', 'book-details-page', 'drawer-overlay'];
-    let closedSomething = false;
-
-    activeModals.forEach(id => {
-        const el = document.getElementById(id);
-        if (el && (el.classList.contains('open') || el.classList.contains('active'))) {
-            el.classList.remove('open', 'active');
-            closedSomething = true;
-        }
-    });
-
-    if (closedSomething) {
-        document.body.classList.remove('lock-scroll');
-        document.documentElement.classList.remove('lock-scroll');
-    }
+    // إغلاق كل النوافذ المفتوحة بدون إضافة حالات جديدة للتاريخ
+    closeCart(false);
+    closeSupport(false);
+    closeBookDetails(false);
 
     // فتح الحالة المطلوبة بناءً على التاريخ (الرجوع أو التقديم)
     if (state.view === 'cart') openCart(false);
@@ -222,6 +216,10 @@ function pushNavigationState(stateName, extraData = {}) {
     // منع تكرار نفس الحالة في التاريخ
     if (!currentState || currentState.view !== stateName || (stateName === 'details' && currentState.id !== extraData.id)) {
         window.history.pushState(state, "");
+        // تحديث الرابط في المتصفح ليصبح قابلاً للمشاركة
+        if (stateName === 'details') {
+            window.history.replaceState(state, "", `?id=${extraData.id}`);
+        }
     }
 }
 
@@ -410,7 +408,9 @@ function renderBookCard(book, index) {
             </div>
             <p class="author-name">${t.by}: ${displayAuthor}</p>
             <p class="book-desc">${displayDesc}</p>
-            <button class="cart-btn" id="add-btn-${book.id}" data-id="${book.id}" onclick="event.stopPropagation(); addItemToCart('${book.id}')"><i class="bi bi-cart-plus"></i></button>
+            <button class="cart-btn" id="add-btn-${book.id}" data-id="${book.id}" onclick="event.stopPropagation(); addItemToCart('${book.id}')">
+                <i class="bi bi-cart-plus"></i>
+            </button>
             <div class="price-cart-container"><div class="price">${book.price} ${t.currency}</div></div>
         </div>`;
 }
@@ -460,6 +460,12 @@ function showBookDetails(id, shouldPush = true) {
     const img1 = getValidImageUrl(book.image_url);
     const img2 = getValidImageUrl(book.image_url2);
     const has2nd = book.image_url2 && book.image_url2 !== book.image_url;
+
+    // تحسين SEO: تغيير عنوان الصفحة عند فتح تفاصيل الكتاب
+    const originalTitle = document.title;
+    document.title = `${book.title} | يوتوبيا لاند`;
+    // تتبع في جوجل أن الزائر شاهد هذا الكتاب
+    if (typeof gtag === 'function') gtag('event', 'view_item', { items: [{ item_name: book.title, price: book.price }] });
 
     content.innerHTML = `
         <div class="details-image">
@@ -549,6 +555,8 @@ function closeBookDetails(shouldGoBack = true) {
     setTimeout(() => {
         detailsPage.style.display = 'none';
         window.currentOpenedBookId = null;
+        document.title = "يوتوبيا لاند - عالم عشاق الكتب"; // إعادة العنوان الأصلي
+        window.history.replaceState({ view: 'home' }, "", window.location.pathname); // تنظيف الرابط
     }, 500);
     document.body.classList.remove('lock-scroll');
     document.documentElement.classList.remove('lock-scroll');
@@ -886,16 +894,16 @@ async function startChatSync(phone) {
     const { data, error } = await _supabase.from('messages').select('*').eq('customer_phone', phone).order('created_at', { ascending: true });
     if (error) console.error("Error loading history:", error);
 
-    // مسح الرسالة الترحيبية الافتراضية فور التأكد من هوية المستخدم
-    chatBody.innerHTML = ''; 
+    // تنظيف الرسائل القديمة فقط مع الحفاظ على مؤشر الكتابة
+    const oldMsgs = chatBody.querySelectorAll('.msg');
+    oldMsgs.forEach(m => m.remove());
     
     if (data && data.length > 0) { 
         data.forEach(m => appendMessage(m.text, m.sender)); 
         // سكرول لآخر رسالة بعد تحميل التاريخ
         setTimeout(() => { chatBody.scrollTop = chatBody.scrollHeight; }, 100);
     } else {
-        // إذا لم يكن هناك تاريخ، نعيد الرسالة الترحيبية أو نتركها فارغة
-        chatBody.innerHTML = '<div class="msg msg-admin">أهلاً بكِ مجدداً! ✨ كيف يمكننا مساعدتكِ؟</div>';
+        appendMessage('أهلاً بكِ مجدداً! ✨ كيف يمكننا مساعدتكِ؟', 'admin');
     }
 
     // 2. الاشتراك في القناة الموحدة
@@ -935,19 +943,33 @@ async function startChatSync(phone) {
         })
         .on('broadcast', { event: 'typing' }, payload => {
             if (payload.payload.sender === 'admin') {
-                const indicator = document.getElementById('typing-indicator');
-                if (!indicator) {
-                    const div = document.createElement('div');
-                    div.id = 'typing-indicator';
-                    div.className = 'typing-indicator';
-                    div.innerHTML = `الأدمن يكتب الآن <div class="typing-dots"><span></span><span></span><span></span></div>`;
-                    document.getElementById('chat-body').appendChild(div);
+                const indicator = document.getElementById('client-typing-indicator');
+                const header = document.getElementById('client-chat-header');
+                
+                if (indicator) {
+                    const isTyping = payload.payload.typing;
+                    if (isTyping) {
+                        indicator.style.display = 'flex';
+                        
+                        // تحديث العنوان ليظهر أن الأدمن يكتب (مثل واتساب)
+                        if (header && !header.innerText.includes('...')) {
+                            header.dataset.original = header.innerHTML;
+                            header.innerHTML = 'الدعم يكتب الآن... <i class="bi bi-pencil-fill"></i>';
+                            header.style.color = '#2ecc71'; // لون أخضر نشط
+                        }
+
+                        const cb = document.getElementById('chat-body');
+                        cb.scrollTop = cb.scrollHeight;
+                        clearTimeout(typingTimer);
+                        typingTimer = setTimeout(() => { 
+                            indicator.style.display = 'none';
+                            if(header && header.dataset.original) { header.innerHTML = header.dataset.original; header.style.color = ''; }
+                        }, 4000);
+                    } else {
+                        indicator.style.display = 'none';
+                        if(header && header.dataset.original) { header.innerHTML = header.dataset.original; header.style.color = ''; }
+                    }
                 }
-                const ind = document.getElementById('typing-indicator');
-                ind.style.display = 'flex';
-                document.getElementById('chat-body').scrollTop = document.getElementById('chat-body').scrollHeight;
-                clearTimeout(typingTimer);
-                typingTimer = setTimeout(() => { ind.style.display = 'none'; }, 2000);
             }
         })
         .on('broadcast', { event: 'delete_chat' }, () => { 
@@ -973,8 +995,14 @@ async function sendMessage() {
     if (!phone) { alert("من فضلكِ أدخلي رقم الموبايل أولاً."); showSupport(); return; }
     if (!chatSubscription) await startChatSync(phone);
 
-    // إرسال إشارة إيقاف الكتابة
-    chatSubscription.send({ type: 'broadcast', event: 'typing', payload: { typing: false, sender: 'user' } });
+    // إرسال الرسالة عبر البث المباشر فوراً لسرعة الاستجابة عند الأدمن
+    if (chatSubscription) {
+        chatSubscription.send({ 
+            type: 'broadcast', 
+            event: 'msg', 
+            payload: { text, sender: 'user', msgId: Date.now() } 
+        });
+    }
 
     appendMessage(text, 'user'); input.value = '';
     await _supabase.from('messages').insert([{ customer_phone: phone, sender: 'user', text: text }]);

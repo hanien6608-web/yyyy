@@ -594,6 +594,18 @@ header {
     font-weight: bold;
 }
 
+/* شكل علامة نفذت الكمية */
+.out-of-stock-badge {
+    background: #e74c3c;
+    color: white;
+    font-size: 0.75rem;
+    font-weight: bold;
+    padding: 5px 12px;
+    border-radius: 50px;
+    display: inline-block;
+    margin-bottom: 10px;
+}
+
 .cart-btn {
     position: absolute;
     bottom: 15px;
