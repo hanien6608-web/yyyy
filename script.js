@@ -377,15 +377,17 @@ async function getMyLibraryData() {
 // وظيفة عرض قائمة الكتب في الصفحة
 function renderBooksList(data) {
     const container = document.getElementById('books-list');
+    const lang = document.documentElement.lang || 'ar';
+    const t = translations[lang];
     
     if (data.length === 0) {
         if (currentView === 'wishlist') {
             container.innerHTML = `
-                <div style="text-align:center; padding:80px 20px; color: var(--paper-light); grid-column: 1/-1;">
-                    <i class="bi bi-bookmark-heart" style="font-size: 4rem; color: var(--accent-wood); opacity: 0.3; margin-bottom: 20px; display: block;"></i>
-                    <h3 style="margin-bottom: 10px;">قائمة المفضلة فارغة</h3>
-                    <p style="opacity: 0.7; margin-bottom: 30px;">لم تقم بإضافة أي كتب لمفضلتك بعد.</p>
-                    <button class="shop-now-btn" onclick="shopNow()">اكتشف الآن <i class="bi bi-arrow-left-short"></i></button>
+                <div style="text-align:center; padding:0 20px; margin-top:-20px; color: var(--paper-light); grid-column: 1/-1;">
+                    <i class="bi bi-bookmark-heart" style="font-size: 2.5rem; color: var(--accent-wood); opacity: 0.3; margin-bottom: 5px; display: block;"></i>
+                    <h3 style="margin-bottom: 0px;">${t.wishlistEmptyTitle}</h3>
+                    <p style="opacity: 0.7; margin-bottom: 15px; font-size: 0.9rem;">${t.wishlistEmptyDesc}</p>
+                    <button class="shop-now-btn" onclick="shopNow()">${t.discoverNow} <i class="bi ${lang === 'ar' ? 'bi-arrow-left-short' : 'bi-arrow-right-short'}"></i></button>
                 </div>`;
         } else {
             const activeCat = document.querySelector('.category-item.active')?.innerText || 'الكل';
@@ -693,9 +695,13 @@ const translations = {
         categories: ["الكل", "العروض", "روايات", "فانتازيا", "تنمية ذاتية", "ديني", "رعب"],
         home: "الرئيسية", cart: "السلة", wishlist: "المفضلة", support: "الدعم",
         dedication: "إهداء خاص", categoriesBottomBar: "تصنيفات", by: "تأليف", currency: "ج.م",
-        dedicationText: "لكل من يجد ضالته بين الأسطر، لكل من يسافر دون أن يتحرك، ولكل عشاق الكتب.. هذا المكان لكم.",
+        dedicationText: "لكل من يجد ضالته بين الأسطر، لكل من يسافر دون أن يتحرك، ولكل عشاق الكتب.. هذا المكان ليس مجرد متجر، بل هو يوتوبيا خاصة تجمعنا على حب الكلمة والمعرفة. نحن هنا لنرتقي بشغفكم ونبني معاً عالماً يجمع بين سحر الخيال وواقع الحكمة.",
         backToLibrary: "العودة للمكتبة",
         supportHeader: "مركز الدعم",
+        developedBy: "تمت البرمجة والتطوير بواسطة حنين ✨",
+        wishlistEmptyTitle: "قائمة المفضلة فارغة",
+        wishlistEmptyDesc: "لم تقم بإضافة أي كتب لمفضلتك بعد.",
+        discoverNow: "اكتشف الآن",
         mostSelling: "الأكثر مبيعاً في يوتوبيا", relatedBooks: "كتب قد تهمك",
         booksCount: "عدد الكتب", book: "كتاب", totalOrder: "إجمالي الطلب", 
         shippingCostLabel: "تكلفة الشحن", grandTotalLabel: "الإجمالي الكلي",
@@ -721,10 +727,11 @@ const translations = {
         logo: "Utopia Land", search: "Search for title or author...", quickSearch: "Quick search...",
         categories: ["All", "Offers", "Novels", "Fantasy", "Self-Dev", "Religious", "Horror"],
         home: "Home", cart: "Cart", wishlist: "Wishlist", support: "Support",
-        dedication: "Special Dedication", categoriesBottomBar: "Categories", by: "By", currency: "EGP",
-        dedicationText: "For those who find themselves between the lines, for those who travel without moving, and for all book lovers.. this place is for you.",
+        dedication: "A Royal Dedication", categoriesBottomBar: "Categories", by: "By", currency: "EGP",
+        dedicationText: "To those who find sanctuary within the pages, to the wanderers who traverse universes without ever leaving their seats, and to all bibliophiles... this is not merely a bookstore. This is your personal Utopia—a sanctuary bound by the love of the written word and the pursuit of wisdom. We are here to nurture your passion and build a realm where the brilliance of imagination meets the depth of knowledge.",
         backToLibrary: "Back to Library",
         supportHeader: "Support Center",
+        developedBy: "Designed & Developed with Excellence by Haneen ✨",
         mostSelling: "Best Sellers in Utopia",
         relatedBooks: "Books You May Like",
         placeholders: {
@@ -864,6 +871,10 @@ async function toggleLanguage() {
     if(dedicationH3) dedicationH3.innerHTML = `${t.dedication} <i class="bi bi-feather"></i>`;
     const dedicationP = document.querySelector('.dedication-box p');
     if(dedicationP) dedicationP.innerText = t.dedicationText;
+
+    // ترجمة كارت المبرمج
+    const devBadge = document.getElementById('dev-badge');
+    if(devBadge) devBadge.innerText = t.developedBy;
 
     // تحديث السلة والكتب والواجهة فوراً
     if (window.currentOpenedBookId) showBookDetails(window.currentOpenedBookId, false);
