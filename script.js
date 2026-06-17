@@ -42,6 +42,40 @@ let hasMore = true;
 let lastProcessedBroadcastId = null; // تعريف المتغير المفقود
 let lastProcessedMsgText = null; // تعريف المتغير المفقود
 
+// عداد لتتبع عدد العناصر التي تمنع السكرول
+let lockScrollCount = 0;
+function addLockScroll() {
+    lockScrollCount++;
+    document.body.classList.add('lock-scroll');
+    document.documentElement.classList.add('lock-scroll');
+}
+function removeLockScroll() {
+    lockScrollCount--;
+    if (lockScrollCount <= 0) { // فقط إذا لم يعد هناك أي عنصر يمنع السكرول
+        document.body.classList.remove('lock-scroll');
+        document.documentElement.classList.remove('lock-scroll');
+        lockScrollCount = 0; // التأكد من عدم النزول تحت الصفر
+    }
+}
+
+// وظيفة ذكية للتحكم في سكرول الطبقات: تمنع سكرول صفحة التفاصيل إذا كانت السلة أو الدعم مفتوحين فوقها
+function updateLayersScroll() {
+    const detailsPage = document.getElementById('book-details-page');
+    const isCartOpen = document.getElementById('cart-drawer').classList.contains('open');
+    const isSupportOpen = document.getElementById('support-drawer').classList.contains('open');
+
+    if (detailsPage) {
+        // إذا كانت السلة أو الدعم مفتوحين، نغلق سكرول صفحة التفاصيل تماماً
+        detailsPage.style.overflowY = (isCartOpen || isSupportOpen) ? 'hidden' : 'auto';
+    }
+}
+
+// مخزن لترجمات المحافظات لتجنب تكرار الطلبات
+let provinceTranslationCache = JSON.parse(localStorage.getItem('provinceTranslationCache')) || {};
+
+// مخزن للترجمات الآلية لتجنب تكرار الطلبات
+let autoTranslationCache = JSON.parse(localStorage.getItem('autoTranslationCache')) || {};
+
 // تعريف وتحميل صوت الشات مسبقاً
 const chatSound = new Audio('https://ywbmamklqyrahwqifqdj.supabase.co/storage/v1/object/public/books-images/iphone-notification-ringtone-838.mp3');
 
@@ -108,7 +142,7 @@ const shippingPrices = {
     "سفاجة": 120
 };
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
     const urlParams = new URLSearchParams(window.location.search);
     getMyLibraryData(); // جلب البيانات عند فتح الصفحة
     populateProvinces(); // ملء قائمة المحافظات عند تحميل الصفحة
@@ -122,7 +156,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // فحص إذا كان المستخدم قادماً من إشعار (والموقع كان مغلقاً)
     if (urlParams.get('openSupport') === 'true') {
-        setTimeout(showSupport, 1000);
+        setTimeout(() => showSupport(true), 1000); // تأكد من تمرير true لـ shouldPush
         window.history.replaceState({}, document.title, window.location.pathname);
     }
 
@@ -182,10 +216,11 @@ function scrollToTop() {
 window.addEventListener('popstate', function(event) {
     const state = event.state || { view: 'home' };
     
-    // إغلاق كل النوافذ المفتوحة بدون إضافة حالات جديدة للتاريخ
-    closeCart(false);
-    closeSupport(false);
-    closeBookDetails(false);
+    // إغلاق النوافذ فقط إذا لم تكن هي الوجهة المطلوبة في الحالة الجديدة
+    // هذا يضمن بقاء صفحة التفاصيل مفتوحة عند إغلاق السلة أو الدعم
+    if (state.view !== 'cart') closeCart(false);
+    if (state.view !== 'support') closeSupport(false);
+    if (state.view !== 'details') closeBookDetails(false);
 
     // فتح الحالة المطلوبة بناءً على التاريخ (الرجوع أو التقديم)
     if (state.view === 'cart') openCart(false);
@@ -306,12 +341,20 @@ async function getMyLibraryData() {
     if (bookId) showBookDetails(bookId, false);
 
     // تفعيل التحديث اللحظي للكتب (إضافة، تعديل، حذف)
-    _supabase.channel('realtime-books').on('postgres_changes', {
+    _supabase.channel('realtime-books', {
+        config: {
+            broadcast: { self: true } // السماح بالبث الذاتي لتحديث الكتب المضافة حديثاً
+        }
+    }).on('postgres_changes', {
         event: '*', 
         schema: 'public',
         table: 'books'
     }, payload => {
         console.log('تحديث في الكتب:', payload);
+        // إذا كان التحديث من نفس العميل (مثلاً إضافة كتاب جديد)، لا نحدث القائمة بالكامل
+        // هذا يمنع الـ flicker عند إضافة كتاب جديد من لوحة التحكم
+        if (payload.new && payload.new.id && window.currentOpenedBookId === payload.new.id) return;
+
         if (payload.eventType === 'INSERT') {
             window.fullData.unshift(payload.new);
         } else if (payload.eventType === 'UPDATE') {
@@ -381,22 +424,29 @@ function renderBookCard(book, index) {
     const t = translations[lang];
     const isSoldOut = book.stock_quantity <= 0;
 
+    // نظام الترجمة الذكي: يستخدم الكاش أولاً، ثم البيانات اليدوية إن وجدت، ثم الأصل
     let displayTitle = book.title;
     let displayAuthor = book.author;
     let displayDesc = book.description || '';
 
-    if (lang === 'en' && t.bookData && t.bookData[book.id]) {
-        displayTitle = t.bookData[book.id].title || displayTitle;
-        displayAuthor = t.bookData[book.id].author || displayAuthor;
-        displayDesc = t.bookData[book.id].desc || displayDesc;
+    if (lang === 'en') {
+        const cache = autoTranslationCache[book.id];
+        displayTitle = cache?.title || (book.title_en || (t.bookData[book.id]?.title || book.title));
+        displayAuthor = cache?.author || (book.author_en || (t.bookData[book.id]?.author || book.author));
+        displayDesc = cache?.desc || (book.description_en || (t.bookData[book.id]?.desc || displayDesc));
+        
+        // إذا لم تكن الترجمة موجودة في أي مكان، نطلق عملية الترجمة الآلية في الخلفية
+        if (!cache && !book.title_en && !t.bookData[book.id]) {
+            triggerAutoTranslate(book);
+        }
     }
 
     return `
-        <div class="book-card" style="animation: fadeInUp ${0.3 + (index * 0.1)}s ease-out;" onclick="showBookDetails('${book.id}')">
+       <div class="book-card" style="animation: fadeInUp ${0.3 + (index * 0.1)}s ease-out;" onclick="showBookDetails('${book.id}')" itemscope itemtype="http://schema.org/Book">
             <div class="image-box">
                 ${has2nd ? `<div class="hover-trigger trigger-right"></div><div class="hover-trigger trigger-left"></div>` : ''}
-                <img src="${img1}" class="main-img" loading="lazy"> <!-- تحميل ذكي حسب الصف -->
-                ${has2nd ? `<img src="${img2}" class="hover-img">` : ''}
+                <img src="${img1}" class="main-img" loading="lazy" alt="كتاب ${displayTitle} - ${displayAuthor}" itemprop="image"> <!-- تحميل ذكي حسب الصف -->
+                ${has2nd ? `<img src="${img2}" class="hover-img" alt="غلاف إضافي لكتاب ${displayTitle}">` : ''}
                 <div class="image-indicators"><div class="dot active"></div>${has2nd ? `<div class="dot"></div>` : ''}</div>
             </div>
             <div class="book-actions">
@@ -405,19 +455,19 @@ function renderBookCard(book, index) {
                     <i id="wish-icon-${book.id}" class="bi bi-bookmark-heart"></i>
                 </span>
             </div>
-            <h3>${displayTitle}</h3>
+            <h3 itemprop="name">${displayTitle}</h3>
             <div class="star-rating" style="justify-content: center; font-size: 0.8rem;">
                 <i class="bi bi-star-fill"></i><i class="bi bi-star-fill"></i><i class="bi bi-star-fill"></i><i class="bi bi-star-fill"></i><i class="bi bi-star-half"></i>
             </div>
-            <p class="author-name">${t.by}: ${displayAuthor}</p>
-            <p class="book-desc">${displayDesc}</p>
+            <p class="author-name" itemprop="author">${t.by}: ${displayAuthor}</p>
+            <p class="book-desc" itemprop="description">${displayDesc}</p>
             ${isSoldOut ? 
                 `<div class="out-of-stock-badge">نفذت الكمية</div>` : 
                 `<button class="cart-btn" id="add-btn-${book.id}" data-id="${book.id}" onclick="event.stopPropagation(); addItemToCart('${book.id}')">
                     <i class="bi bi-cart-plus"></i>
                 </button>`
             }
-            <div class="price-cart-container"><div class="price">${book.price} ${t.currency}</div></div>
+            <div class="price-cart-container" itemprop="offers" itemscope itemtype="http://schema.org/Offer"><div class="price"><span itemprop="price">${book.price}</span> <span itemprop="priceCurrency" content="EGP">${t.currency}</span></div></div>
         </div>`;
 }
 
@@ -455,14 +505,39 @@ function renderSmallCard(book) {
 }
 
 let currentDetailsQty = 1;
-function showBookDetails(id, shouldPush = true) {
+async function showBookDetails(id, shouldPush = true) {
+    const detailsPage = document.getElementById('book-details-page');
+    const isAlreadyOpen = detailsPage.classList.contains('active');
+    const isSameBook = String(window.currentOpenedBookId) === String(id);
+
+    // إذا كانت صفحة التفاصيل مفتوحة بالفعل لنفس الكتاب، نكتفي بالتأكد من الحالة ولا نعيد بناء المحتوى
+    if (isAlreadyOpen && isSameBook) {
+        if (shouldPush) pushNavigationState('details', { id });
+        return;
+    }
+
     const book = window.fullData.find(b => String(b.id) === String(id));
     if (!book) return;
+
+    const lang = document.documentElement.lang || 'ar';
+    const t = translations[lang];
     
     window.currentOpenedBookId = book.id; 
     currentDetailsQty = 1; 
-    const detailsPage = document.getElementById('book-details-page');
     const content = document.getElementById('details-content');
+
+    // تطبيق الترجمة الذكية داخل صفحة التفاصيل
+    let displayTitle = book.title;
+    let displayAuthor = book.author;
+    let displayDesc = book.description || (lang === 'ar' ? 'لا يوجد وصف متاح.' : 'No description available.');
+
+    if (lang === 'en') {
+        const cache = autoTranslationCache[book.id];
+        displayTitle = cache?.title || (book.title_en || (t.bookData[book.id]?.title || book.title));
+        displayAuthor = cache?.author || (book.author_en || (t.bookData[book.id]?.author || book.author));
+        displayDesc = cache?.desc || (book.description_en || (t.bookData[book.id]?.desc || displayDesc));
+    }
+
     const isInWishlist = wishlist.includes(book.id);
     const isInCart = cart.find(i => String(i.id) === String(book.id));
     const isSoldOut = book.stock_quantity <= 0;
@@ -480,8 +555,8 @@ function showBookDetails(id, shouldPush = true) {
         <div class="details-image">
             <div class="details-image-container" id="details-img-container">
                 <div class="details-slider" id="details-slider">
-                    <img src="${img1}" alt="${book.title}">
-                    ${has2nd ? `<img src="${img2}" alt="${book.title}">` : ''}
+                    <img src="${img1}" alt="كتاب ${book.title} - ${book.author}">
+                    ${has2nd ? `<img src="${img2}" alt="عرض إضافي لكتاب ${book.title}">` : ''}
                 </div>
                 ${has2nd ? `
                 <button class="slider-arrow arrow-prev" onclick="event.stopPropagation(); slideDetails(0)"><i class="bi bi-chevron-right"></i></button>
@@ -497,10 +572,10 @@ function showBookDetails(id, shouldPush = true) {
                 <i class="bi bi-star-fill"></i><i class="bi bi-star-fill"></i><i class="bi bi-star-fill"></i><i class="bi bi-star-fill"></i><i class="bi bi-star-fill"></i>
                 <span style="color: var(--desc-color); font-size: 0.9rem; margin-right: 10px;">(5.0)</span>
             </div>
-            <h1>${book.title}</h1>
-            <p class="author">بواسطة: ${book.author}</p>
-            <p class="full-desc">${book.description || 'لا يوجد وصف متاح لهذا الكتاب حالياً في يوتوبيا لاند.'}</p>
-            <div style="font-size: 2rem; color: var(--paper-light); margin-bottom: 25px; font-weight: bold;">${book.price} ج.م</div>
+            <h1>${displayTitle}</h1>
+            <p class="author">${t.by}: ${displayAuthor}</p>
+            <p class="full-desc">${displayDesc}</p>
+            <div style="font-size: 2rem; color: var(--paper-light); margin-bottom: 25px; font-weight: bold;">${book.price} ${t.currency}</div>
             <div class="details-actions">
                 ${isSoldOut ? 
                     `<div class="out-of-stock-badge" style="font-size: 1.3rem; padding: 15px 40px; flex: 1; text-align: center;">نفذت الكمية من يوتوبيا 🌸</div>` :
@@ -519,11 +594,11 @@ function showBookDetails(id, shouldPush = true) {
             </div>
         </div>
         <div class="extra-sections-wrapper" style="grid-column: 1 / -1;">
-            <div class="section-header"><i class="bi bi-fire"></i><span>الأكثر مبيعاً في يوتوبيا</span></div>
+            <div class="section-header"><i class="bi bi-fire"></i><span>${t.mostSelling}</span></div>
             <div class="books-grid" style="gap: 15px; margin-bottom: 40px;">
                 ${getRandomBooks(4).map((b, i) => renderBookCard(b, i)).join('')}
             </div>
-            <div class="section-header"><i class="bi bi-lightbulb-fill"></i><span>كتب قد تهمك</span></div>
+            <div class="section-header"><i class="bi bi-lightbulb-fill"></i><span>${t.relatedBooks}</span></div>
             <div class="books-grid" style="gap: 15px;">
                 ${getRelatedBooks(book).map((b, i) => renderBookCard(b, i)).join('')}
             </div>
@@ -537,8 +612,10 @@ function showBookDetails(id, shouldPush = true) {
 
     detailsPage.style.display = 'flex'; 
     setTimeout(() => detailsPage.classList.add('active'), 10);
-    document.body.classList.add('lock-scroll');
-    document.documentElement.classList.add('lock-scroll');
+    if (!isAlreadyOpen) addLockScroll();
+    
+    updateLayersScroll(); // التأكد من حالة السكرول عند فتح الصفحة
+
     if (shouldPush) pushNavigationState('details', { id: book.id });
     detailsPage.scrollTo(0,0);
     setTimeout(observeBookCards, 300); // تفعيل ظهور الكروت الصغيرة في صفحة التفاصيل
@@ -571,8 +648,10 @@ function closeBookDetails(shouldGoBack = true) {
         document.title = "يوتوبيا لاند - عالم عشاق الكتب"; // إعادة العنوان الأصلي
         window.history.replaceState({ view: 'home' }, "", window.location.pathname); // تنظيف الرابط
     }, 500);
-    document.body.classList.remove('lock-scroll');
-    document.documentElement.classList.remove('lock-scroll');
+    removeLockScroll();
+    
+    // لا حاجة لاستدعاء updateLayersScroll هنا لأن الصفحة ستختفي تماماً
+
     if (shouldGoBack && window.history.state?.view === 'details') window.history.back();
 }
 
@@ -615,6 +694,27 @@ const translations = {
         home: "الرئيسية", cart: "السلة", wishlist: "المفضلة", support: "الدعم",
         dedication: "إهداء خاص", categoriesBottomBar: "تصنيفات", by: "تأليف", currency: "ج.م",
         dedicationText: "لكل من يجد ضالته بين الأسطر، لكل من يسافر دون أن يتحرك، ولكل عشاق الكتب.. هذا المكان لكم.",
+        backToLibrary: "العودة للمكتبة",
+        supportHeader: "مركز الدعم",
+        mostSelling: "الأكثر مبيعاً في يوتوبيا", relatedBooks: "كتب قد تهمك",
+        booksCount: "عدد الكتب", book: "كتاب", totalOrder: "إجمالي الطلب", 
+        shippingCostLabel: "تكلفة الشحن", grandTotalLabel: "الإجمالي الكلي",
+        shippingNote: "ملحوظة: سعر الشحن", shippingDays: "الشحن يستغرق من 3 إلى 5 أيام عمل.",
+        confirmOrderHeader: "تأكيد طلبك", confirmOrderBtn: "تأكيد الطلب",
+        processingOrder: "جاري إرسال الطلب...", orderSuccess: "تم استلام طلبك بنجاح! 🎉 سيتم التواصل معك قريباً.",
+        orderError: "عذراً، حدث خطأ أثناء إرسال الطلب:", startShopping: "ابدأ التسوق الآن",
+        cartEmptyTitle: "سلتك خالية من الكنوز..", cartEmptyDesc: "رحلتك بين صفحات الكتب لم تبدأ بعد",
+        nameErrorMsg: "الاسم يجب أن يتكون من كلمتين على الأقل.",
+        phoneErrorMsg: "أدخل رقم موبايل مصري صحيح (11 رقم).",
+        whatsappErrorMsg: "أدخل رقم واتساب مصري صحيح (11 رقم).",
+        provinceErrorMsg: "من فضلك اختر المحافظة.",
+        addressErrorMsg: "من فضلك أدخلي العنوان بالتفصيل لضمان وصول الشحن.",
+        phoneRequiredAlert: "من فضلكِ أدخلي رقم الموبايل أولاً.",
+        botWelcomeMsg: "أهلاً بكِ مجدداً! ✨ كيف يمكننا مساعدتكِ؟",
+        placeholders: {
+            name: "الاسم الثنائي على الأقل", phone: "رقم الموبايل المصري (11 رقم)", whatsapp: "رقم الواتساب (إجباري)", 
+            province: "اختر المحافظة", address: "العنوان بالتفصيل", notes: "ملاحظات العميل (اختياري)", chat: "اكتبي استفسارك هنا..."
+        },
         bookData: {}
     },
     en: {
@@ -623,15 +723,63 @@ const translations = {
         home: "Home", cart: "Cart", wishlist: "Wishlist", support: "Support",
         dedication: "Special Dedication", categoriesBottomBar: "Categories", by: "By", currency: "EGP",
         dedicationText: "For those who find themselves between the lines, for those who travel without moving, and for all book lovers.. this place is for you.",
+        backToLibrary: "Back to Library",
+        supportHeader: "Support Center",
+        mostSelling: "Best Sellers in Utopia",
+        relatedBooks: "Books You May Like",
+        placeholders: {
+            name: "Full Name", phone: "Phone Number", whatsapp: "WhatsApp Number", 
+            province: "Select Province", address: "Full Address Details", notes: "Order Notes (Optional)", chat: "Type your message here..."
+        },
         bookData: {
             1: { title: "Psychological Fragility", author: "Ismail Arafa", desc: "Discusses the phenomenon of psychological fragility." },
             2: { title: "Stockholm", author: "Ahmed Al-Hamdan", desc: "A mysterious journey between love and obsession." },
-            3: { title: "Arses 1", author: "Ahmed Al-Hamdan", desc: "A fantasy epic blending magic and adventure." }
+            3: { title: "Arses 1", author: "Ahmed Al-Hamdan", desc: "A fantasy epic blending magic and adventure." },
+            4: { title: "The Alchemist", author: "Paulo Coelho", desc: "An allegorical novel by Paulo Coelho about following one's dreams." },
+            5: { title: "1984", author: "George Orwell", desc: "A dystopian social science fiction novel by George Orwell." },
+            // أضيفي هنا باقي الكتب بنفس الطريقة باستخدام الـ ID الصحيح من Supabase
+            6: { title: "English Title", author: "English Author", desc: "English Description" },
+            7: { title: "Another Book", author: "Another Author", desc: "Another Description" }
         }
     }
 };
 
-function toggleLanguage() {
+// وظيفة الترجمة الآلية باستخدام محرك Google (بدون مفتاح API لسهولة الاستخدام)
+async function translateText(text) {
+    if (!text || !/[^\x00-\x7F]/.test(text)) return text; // إذا كان النص إنجليزي أصلاً لا نترجمه
+    try {
+        const res = await fetch(`https://translate.googleapis.com/translate_a/single?client=gtx&sl=ar&tl=en&dt=t&q=${encodeURIComponent(text)}`);
+        const data = await res.json();
+        return data[0].map(s => s[0]).join('');
+    } catch (e) {
+        return text;
+    }
+}
+
+async function triggerAutoTranslate(book) {
+    // تجنب الطلبات المتكررة لنفس الكتاب في نفس الجلسة
+    if (book._isTranslating) return;
+    book._isTranslating = true;
+
+    const translatedTitle = await translateText(book.title);
+    const translatedAuthor = await translateText(book.author);
+    const translatedDesc = await translateText(book.description);
+
+    autoTranslationCache[book.id] = {
+        title: translatedTitle,
+        author: translatedAuthor,
+        desc: translatedDesc
+    };
+
+    localStorage.setItem('autoTranslationCache', JSON.stringify(autoTranslationCache));
+    
+    // تحديث الواجهة فقط إذا كان المستخدم ما زال على اللغة الإنجليزية
+    if (document.documentElement.lang === 'en') {
+        renderBooksList(window.fullData);
+    }
+}
+
+async function toggleLanguage() {
     const html = document.documentElement;
     const langBtn = document.getElementById('lang-toggle');
     const isAr = html.dir === "rtl";
@@ -639,25 +787,99 @@ function toggleLanguage() {
     const t = translations[newLang];
     html.dir = isAr ? "ltr" : "rtl";
     html.lang = newLang;
+    // تحديث زر اللغة نفسه
     langBtn.innerText = isAr ? "AR" : "EN";
-    document.querySelectorAll('.logo, .sticky-logo').forEach(el => el.innerText = t.logo);
+    // تحديث اللوجو (تم تعديل الكلاس ليتطابق مع الـ HTML)
+    document.querySelectorAll('.logo-text, .sticky-logo').forEach(el => el.innerText = t.logo);
+    
+    // ترجمة زر العودة للمكتبة
+    const backBtn = document.querySelector('.back-btn');
+    if (backBtn) backBtn.innerHTML = `<i class="bi ${newLang === 'ar' ? 'bi-arrow-right' : 'bi-arrow-left'}"></i> ${t.backToLibrary}`;
+
+    // ترجمة زر "ابدأ التسوق الآن" في السلة الفارغة
+    const shopNowBtnInCart = document.querySelector('#cart-items-container .shop-now-btn');
+    if (shopNowBtnInCart) shopNowBtnInCart.innerHTML = `${t.startShopping} <i class="bi bi-bag-check-fill"></i>`;
+
     document.getElementById('main-search').placeholder = t.search;
     document.getElementById('sticky-search').placeholder = t.quickSearch;
+    
+    // ترجمة النصوص الشبحية (Placeholders)
+    document.getElementById('customer-name').placeholder = t.placeholders.name;
+    document.getElementById('customer-phone').placeholder = t.placeholders.phone;
+    document.getElementById('customer-whatsapp').placeholder = t.placeholders.whatsapp;
+    document.getElementById('customer-address').placeholder = t.placeholders.address;
+    document.getElementById('customer-notes').placeholder = t.placeholders.notes;
+    document.getElementById('chat-input').placeholder = t.placeholders.chat;
+    document.querySelector('#customer-province option[value=""]').innerText = t.placeholders.province;
+
     const topCatItems = document.querySelectorAll('.category-item');
     const bottomCatItems = document.querySelectorAll('.dropdown-item');
     t.categories.forEach((name, i) => {
         if(topCatItems[i]) topCatItems[i].innerText = name;
         if(bottomCatItems[i]) bottomCatItems[i].innerText = name;
     });
-    const barItems = document.querySelectorAll('.bottom-bar-item span:last-child');
+    // تحديث نصوص الشريط السفلي بدقة
+    // تحديث نصوص الشريط السفلي بدقة (استهداف الـ span الثاني مباشرة)
+    const barItems = document.querySelectorAll('.bottom-bar-item > span:nth-of-type(2)');
     const barTexts = [t.categoriesBottomBar, t.cart, t.wishlist, t.support];
     barTexts.forEach((text, i) => { if(barItems[i]) barItems[i].innerText = text; });
+    
+    // تحديث المحافظات في القائمة المنسدلة
+    const provinceSelect = document.getElementById('customer-province');
+    if (provinceSelect) {
+        Array.from(provinceSelect.options).forEach(async (opt) => {
+            const arName = opt.getAttribute('data-ar');
+            if (arName) opt.innerText = (newLang === 'en') ? (await translateProvinceName(arName)) : arName;
+        });
+    }
+    
+    // تحديث عناوين النوافذ الجانبية (السلة والدعم)
+    const cartHeader = document.querySelector('#cart-drawer .cart-header h3');
+    if(cartHeader) cartHeader.innerHTML = `${t.confirmOrderHeader} <i class="bi bi-bag-check-fill"></i>`;
+    
+    const supportHeader = document.getElementById('client-chat-header');
+    if(supportHeader) supportHeader.innerHTML = `${t.supportHeader} <i class="bi bi-headset"></i>`;
+
+    // ترجمة نصوص السلة (إجمالي الطلب، عدد الكتب، تكلفة الشحن، الإجمالي الكلي) والقوالب الخاصة بها
+    const booksCountLabel = document.querySelector('#total-sec p');
+    if (booksCountLabel) booksCountLabel.innerHTML = `${t.booksCount}: <span id="books-count-val" style="font-weight: bold; color: var(--accent-wood);">0</span> ${t.book}`;
+    const totalOrderLabel = document.querySelector('#total-sec h4');
+    if (totalOrderLabel) totalOrderLabel.innerHTML = `${t.totalOrder}: <span id="total-val">0</span>`;
+    const shippingSecLabel = document.querySelector('#shipping-sec h4');
+    if (shippingSecLabel) shippingSecLabel.innerHTML = `${t.shippingCostLabel}: <span id="shipping-val">0</span>`;
+    const grandTotalSecLabel = document.querySelector('#grand-total-sec h4');
+    if (grandTotalSecLabel) grandTotalSecLabel.innerHTML = `${t.grandTotalLabel}: <span id="grand-total-val">0</span>`;
+    const shippingInfoMessageP = document.querySelector('#shipping-info-message p:first-child');
+    if (shippingInfoMessageP) shippingInfoMessageP.innerHTML = `${t.shippingNote} <span id="shipping-message-cost">0</span> ${t.currency}`;
+    const shippingInfoMessageP2 = document.querySelector('#shipping-info-message p:last-child');
+    if (shippingInfoMessageP2) shippingInfoMessageP2.innerText = t.shippingDays;
+    
+    // ترجمة جميع أزرار "تأكيد الطلب" (في السلة، مودال البطارية، والدعم) لضمان ترجمتها جميعاً فوراً
+    document.querySelectorAll('.confirm-order-btn').forEach(btn => {
+        btn.innerHTML = `${t.confirmOrderBtn} <i class="bi bi-bag-check-fill"></i>`;
+    });
+
+    // ترجمة الإهداء
     const dedicationH3 = document.querySelector('.dedication-box h3');
     if(dedicationH3) dedicationH3.innerHTML = `${t.dedication} <i class="bi bi-feather"></i>`;
     const dedicationP = document.querySelector('.dedication-box p');
     if(dedicationP) dedicationP.innerText = t.dedicationText;
+
+    // تحديث السلة والكتب والواجهة فوراً
+    if (window.currentOpenedBookId) showBookDetails(window.currentOpenedBookId, false);
+    updateCartUI(); 
+
     const currentData = (currentView === 'wishlist') ? window.fullData.filter(b => wishlist.includes(b.id)) : window.fullData;
     renderBooksList(currentData);
+}
+
+// وظيفة لترجمة المحافظات ديناميكياً
+async function translateProvinceName(provinceName) {
+    if (provinceTranslationCache[provinceName]) return provinceTranslationCache[provinceName];
+    const translated = await translateText(provinceName);
+    provinceTranslationCache[provinceName] = translated;
+    localStorage.setItem('provinceTranslationCache', JSON.stringify(provinceTranslationCache));
+    return translated;
 }
 
 function addItemToCart(id, customQty = 1) {
@@ -683,6 +905,9 @@ function updateCartUI() {
     const provinceSelect = document.getElementById('customer-province');
     const orderUI = document.getElementById('order-ui-wrapper');
 
+    const lang = document.documentElement.lang || 'ar';
+    const t = translations[lang];
+
     if (window.fullData) {
         window.fullData.forEach(book => {
             const isInCart = cart.find(i => String(i.id) === String(book.id));
@@ -701,17 +926,33 @@ function updateCartUI() {
     }
     updateGlobalCartCount(); updateGlobalWishCount();
     if (cart.length === 0) {
-        container.innerHTML = `<div style="text-align:center; padding:80px 20px; color: var(--paper-light); display: flex; flex-direction: column; align-items: center; justify-content: center;"><i class="bi bi-cart-x" style="font-size: 4.5rem; color: var(--accent-wood); opacity: 0.4; margin-bottom: 20px;"></i><h3 style="font-size: 1.4rem; font-weight: bold; margin-bottom: 10px;">سلتك خالية من الكنوز..</h3><p style="font-size: 0.95rem; opacity: 0.7; margin-bottom: 25px;">رحلتك بين صفحات الكتب لم تبدأ بعد</p><button class="shop-now-btn" onclick="shopNow()">ابدأ التسوق الآن <i class="bi bi-bag-check-fill"></i></button></div>`;
-        orderUI.style.display = 'none'; return;
+        container.innerHTML = `<div style="text-align:center; padding:80px 20px; color: var(--paper-light); display: flex; flex-direction: column; align-items: center; justify-content: center;"><i class="bi bi-cart-x" style="font-size: 4.5rem; color: var(--accent-wood); opacity: 0.4; margin-bottom: 20px;"></i><h3 style="font-size: 1.4rem; font-weight: bold; margin-bottom: 10px;">${t.cartEmptyTitle}</h3><p style="font-size: 0.95rem; opacity: 0.7; margin-bottom: 25px;">${t.cartEmptyDesc}</p><button class="shop-now-btn" onclick="shopNow()">${t.startShopping} <i class="bi bi-bag-check-fill"></i></button></div>`;
+        orderUI.style.display = 'none'; updateGlobalCartCount(); return;
     }
     orderUI.style.display = 'flex';
-    shippingSec.style.display = provinceSelect.value ? 'block' : 'none';
-    grandTotalSec.style.display = provinceSelect.value ? 'block' : 'none';
-    container.innerHTML = cart.map((item, idx) => `<div class="cart-item"><img src="${item.image_url}" alt="${item.title}"><div class="cart-item-details"><h4>${item.title}</h4><p>${item.price} ج.م</p></div><div class="cart-controls"><button class="qty-btn" onclick="changeQty(${idx}, -1)"><i class="bi bi-dash-circle-fill"></i></button><span class="qty-val">${item.qty}</span><button class="qty-btn" onclick="changeQty(${idx}, 1)"><i class="bi bi-plus-circle-fill"></i></button></div><i class="bi bi-trash3 remove-item-btn" onclick="deleteFromCart(${idx})"></i></div>`).join('');
+
+    container.innerHTML = cart.map((item, idx) => {
+        // ترجمة اسم الكتاب داخل السلة تلقائياً
+        let displayTitle = (lang === 'en' && autoTranslationCache[item.id]) ? autoTranslationCache[item.id].title : item.title;
+        return `<div class="cart-item">
+            <img src="${item.image_url}" alt="${displayTitle}">
+            <div class="cart-item-details">
+                <h4>${displayTitle}</h4>
+                <p>${item.price} ${t.currency}</p>
+            </div>
+            <div class="cart-controls">
+                <button class="qty-btn" onclick="changeQty(${idx}, -1)"><i class="bi bi-dash-circle-fill"></i></button>
+                <span class="qty-val">${item.qty}</span>
+                <button class="qty-btn" onclick="changeQty(${idx}, 1)"><i class="bi bi-plus-circle-fill"></i></button>
+            </div>
+            <i class="bi bi-trash3 remove-item-btn" onclick="deleteFromCart(${idx})"></i>
+        </div>`;
+    }).join('');
+
     const booksTotal = cart.reduce((acc, item) => acc + (item.price * item.qty), 0);
-    totalVal.innerText = booksTotal;
+    totalVal.innerText = `${booksTotal} ${t.currency}`;
     const totalBooksQty = cart.reduce((acc, item) => acc + item.qty, 0); 
-    booksCountVal.innerText = totalBooksQty; 
+    booksCountVal.innerText = `${totalBooksQty}`; 
     const selectedProvinceName = provinceSelect.value;
     shippingCost = shippingPrices[selectedProvinceName] || 0;
     if (selectedProvinceName && shippingCost > 0) {
@@ -719,8 +960,10 @@ function updateCartUI() {
         shippingInfoMessageDiv.style.display = 'block'; shippingSec.style.display = 'block'; grandTotalSec.style.display = 'block';
     } else {
         shippingInfoMessageDiv.style.display = 'none'; shippingSec.style.display = 'none'; grandTotalSec.style.display = 'none';
-    }
-    shippingVal.innerText = shippingCost; grandTotalVal.innerText = booksTotal + shippingCost;
+    } 
+    // تحديث الأرقام والعملة المترجمة داخل القوالب التي تم إنشاؤها في toggleLanguage
+    if (shippingVal) shippingVal.innerText = `${shippingCost} ${t.currency}`; 
+    if (grandTotalVal) grandTotalVal.innerText = `${booksTotal + shippingCost} ${t.currency}`;
 }
 
 function changeQty(idx, delta) {
@@ -799,7 +1042,8 @@ function showCategoriesAndHome(shouldPush = true) {
 function openCart(shouldPush = true) {
     document.getElementById('cart-drawer').classList.add('open');
     document.getElementById('drawer-overlay').classList.add('open');
-    document.body.classList.add('lock-scroll'); document.documentElement.classList.add('lock-scroll');
+    addLockScroll();
+    updateLayersScroll(); // تحديث السكرول فور فتح السلة
     if (shouldPush) pushNavigationState('cart'); updateCartUI();
 }
 
@@ -807,16 +1051,21 @@ function closeCart(shouldGoBack = true) {
     if (!document.getElementById('cart-drawer').classList.contains('open')) return;
     document.getElementById('cart-drawer').classList.remove('open');
     document.getElementById('drawer-overlay').classList.remove('open');
-    document.body.classList.remove('lock-scroll'); document.documentElement.classList.remove('lock-scroll');
+    removeLockScroll();
+    updateLayersScroll(); // إعادة السكرول لما تحته فور إغلاق السلة
     if (shouldGoBack && window.history.state?.view === 'cart') window.history.back();
 }
 
 function shopNow() { showCategoriesAndHome(); }
 
-function populateProvinces() {
+async function populateProvinces() {
     const provinceSelect = document.getElementById('customer-province');
+    const lang = document.documentElement.lang || 'ar';
     for (const [provinceName, cost] of Object.entries(shippingPrices)) {
-        const option = document.createElement('option'); option.value = provinceName; option.innerText = provinceName;
+        const option = document.createElement('option'); 
+        option.value = provinceName; 
+        option.innerText = (lang === 'en') ? (await translateProvinceName(provinceName)) : provinceName;
+        option.setAttribute('data-ar', provinceName); // حفظ الاسم العربي كـ Data Attribute
         provinceSelect.appendChild(option);
     }
     provinceSelect.addEventListener('change', updateCartUI);
@@ -829,37 +1078,43 @@ async function confirmOrder() {
     const addressTextarea = document.getElementById('customer-address'); const addressError = document.getElementById('address-error');
     const notesTextarea = document.getElementById('customer-notes'); const nameError = document.getElementById('name-error');
     const phoneError = document.getElementById('phone-error'); const whatsappError = document.getElementById('whatsapp-error');
-    const provinceError = document.getElementById('province-error'); const confirmBtn = document.querySelector('.confirm-order-btn');
+    const provinceError = document.getElementById('province-error'); 
+    const confirmBtn = document.querySelector('.confirm-order-btn');
+    const lang = document.documentElement.lang || 'ar';
+    const t = translations[lang];
     nameError.style.display = 'none'; phoneError.style.display = 'none'; whatsappError.style.display = 'none'; provinceError.style.display = 'none'; addressError.style.display = 'none';
     let isValid = true;
-    if (nameInput.value.trim().split(/\s+/).length < 2) { nameError.innerText = "الاسم يجب أن يتكون من كلمتين على الأقل."; nameError.style.display = 'block'; isValid = false; }
+    if (nameInput.value.trim().split(/\s+/).length < 2) { nameError.innerText = t.nameErrorMsg; nameError.style.display = 'block'; isValid = false; }
     const egyptianPhoneRegex = /^(010|011|012|015)[0-9]{8}$/;
-    if (!egyptianPhoneRegex.test(phoneInput.value.trim())) { phoneError.innerText = "أدخل رقم موبايل مصري صحيح (11 رقم)."; phoneError.style.display = 'block'; isValid = false; }
-    if (!egyptianPhoneRegex.test(whatsappInput.value.trim())) { whatsappError.innerText = "أدخل رقم واتساب مصري صحيح (11 رقم)."; whatsappError.style.display = 'block'; isValid = false; }
-    if (provinceSelect.value === "") { provinceError.innerText = "من فضلك اختر المحافظة."; provinceError.style.display = 'block'; isValid = false; }
-    if (addressTextarea.value.trim().length < 5) { addressError.innerText = "من فضلك أدخلي العنوان بالتفصيل لضمان وصول الشحن."; addressError.style.display = 'block'; isValid = false; }
+    if (!egyptianPhoneRegex.test(phoneInput.value.trim())) { phoneError.innerText = t.phoneErrorMsg; phoneError.style.display = 'block'; isValid = false; }
+    if (!egyptianPhoneRegex.test(whatsappInput.value.trim())) { whatsappError.innerText = t.whatsappErrorMsg; whatsappError.style.display = 'block'; isValid = false; }
+    if (provinceSelect.value === "") { provinceError.innerText = t.provinceErrorMsg; provinceError.style.display = 'block'; isValid = false; }
+    if (addressTextarea.value.trim().length < 5) { addressError.innerText = t.addressErrorMsg; addressError.style.display = 'block'; isValid = false; }
     if (!isValid) return;
     const booksTotal = cart.reduce((acc, item) => acc + (item.price * item.qty), 0);
     const totalAmount = booksTotal + shippingCost;
     const orderData = { customer_name: nameInput.value.trim(), customer_phone: phoneInput.value.trim(), customer_whatsapp: whatsappInput.value.trim(), province: provinceSelect.value, address: addressTextarea.value.trim(), notes: notesTextarea ? notesTextarea.value.trim() : "", items: cart, total_amount: totalAmount, shipping_cost: shippingCost, status: 'pending' };
     try {
-        confirmBtn.disabled = true; confirmBtn.innerHTML = 'جاري إرسال الطلب... <i class="bi bi-hourglass-split"></i>';
+        confirmBtn.disabled = true; confirmBtn.innerHTML = `${t.processingOrder} <i class="bi bi-hourglass-split"></i>`;
         const { error } = await _supabase.from('orders').insert([orderData]);
         if (error) throw new Error(`خطأ من سوبابيز: ${error.message}`);
-        alert("تم استلام طلبك بنجاح! 🎉 سيتم التواصل معك قريباً.");
+        alert(t.orderSuccess);
         cart = []; updateCartUI(); saveCartToLocalStorage();
         nameInput.value = ''; phoneInput.value = ''; whatsappInput.value = ''; provinceSelect.value = ''; addressTextarea.value = ''; if(notesTextarea) notesTextarea.value = '';
         closeCart();
-    } catch (err) { alert("عذراً، حدث خطأ أثناء إرسال الطلب: " + err.message); }
-    finally { confirmBtn.disabled = false; confirmBtn.innerHTML = 'تأكيد الطلب <i class="bi bi-bag-check-fill"></i>'; }
+    } catch (err) { alert(`${t.orderError} ${err.message}`); }
+    finally { confirmBtn.disabled = false; confirmBtn.innerHTML = `${t.confirmOrderBtn} <i class="bi bi-bag-check-fill"></i>`; }
 }
 
 let chatSubscription = null;
 let typingTimer;
 function showSupport() {
     document.getElementById('support-drawer').classList.add('open'); document.getElementById('drawer-overlay').classList.add('open');
-    document.body.classList.add('lock-scroll'); document.documentElement.classList.add('lock-scroll');
-    supportNewCount = 0; localStorage.setItem('supportNewCount', 0); updateGlobalSupportCount();
+    addLockScroll();
+    updateLayersScroll(); // تحديث السكرول فور فتح الدعم
+    // لا نصفر العداد هنا، بل عند قراءة الرسائل
+    // supportNewCount = 0; localStorage.setItem('supportNewCount', 0); updateGlobalSupportCount();
+    // سيتم تصفير العداد عند تحميل الرسائل في startChatSync
 
     // سكرول لآخر المحادثة فور فتح الشات
     setTimeout(() => { const cb = document.getElementById('chat-body'); if(cb) cb.scrollTop = cb.scrollHeight; }, 100);
@@ -886,7 +1141,8 @@ function showSupport() {
 function closeSupport(shouldGoBack = true) {
     if (!document.getElementById('support-drawer').classList.contains('open')) return;
     document.getElementById('support-drawer').classList.remove('open'); document.getElementById('drawer-overlay').classList.remove('open');
-    document.body.classList.remove('lock-scroll'); document.documentElement.classList.remove('lock-scroll');
+    removeLockScroll();
+    updateLayersScroll(); // إعادة السكرول لما تحته فور إغلاق الدعم
     if (shouldGoBack && window.history.state?.view === 'support') window.history.back();
 }
 
@@ -963,7 +1219,10 @@ async function startChatSync(phone) {
     const chatBody = document.getElementById('chat-body');
 
     // 1. تحميل تاريخ الرسائل
-    const { data, error } = await _supabase.from('messages').select('*').eq('customer_phone', phone).order('created_at', { ascending: true });
+    const { data, error } = await _supabase.from('messages').select('*').eq('customer_phone', phone).order('created_at', { ascending: true }); // فلترة الرسائل حسب رقم العميل
+    
+    // تصفير عداد الرسائل الجديدة عند فتح الشات وقراءة الرسائل
+    supportNewCount = 0; localStorage.setItem('supportNewCount', 0); updateGlobalSupportCount();
     if (error) console.error("Error loading history:", error);
 
     // تنظيف الرسائل القديمة فقط مع الحفاظ على مؤشر الكتابة
@@ -973,6 +1232,8 @@ async function startChatSync(phone) {
     if (data && data.length > 0) { 
         data.forEach(m => appendMessage(m.text, m.sender)); 
         // سكرول لآخر رسالة بعد تحميل التاريخ
+        // إذا كانت آخر رسالة من الأدمن، لا نزيد العداد
+        if (data[data.length - 1].sender === 'admin') supportNewCount = 0;
         setTimeout(() => { chatBody.scrollTop = chatBody.scrollHeight; }, 100);
     } else {
         appendMessage('أهلاً بكِ مجدداً! ✨ كيف يمكننا مساعدتكِ؟', 'admin');
@@ -1050,7 +1311,9 @@ async function sendMessage() {
     const phone = localStorage.getItem('user_chat_phone') || (document.getElementById('customer-phone') ? document.getElementById('customer-phone').value.trim().replace(/\D/g, '') : '');
     
     if (!text) return;
-    if (!phone) { alert("من فضلكِ أدخلي رقم الموبايل أولاً."); showSupport(); return; }
+    const lang = document.documentElement.lang || 'ar';
+    const t = translations[lang];
+    if (!phone) { alert(t.phoneRequiredAlert); showSupport(); return; }
     if (!chatSubscription) await startChatSync(phone);
 
     // إرسال الرسالة عبر البث المباشر فوراً لسرعة الاستجابة عند الأدمن
@@ -1079,7 +1342,9 @@ async function handleAutoOrderInquiry(phone) {
         .from('orders')
         .select('*')
         .eq('customer_phone', phone)
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false }); // فلترة الطلبات حسب رقم العميل
+    const lang = document.documentElement.lang || 'ar';
+    const t = translations[lang];
 
     if (error || !orders || orders.length === 0) {
         await sendAdminAutoReply(phone, "لم نجد أي طلبات مسجلة لهذا الرقم حتى الآن. تأكدي من إدخال الرقم الصحيح الذي سجلتِ به الطلب ✨");
@@ -1098,7 +1363,9 @@ async function handleAutoOrderInquiry(phone) {
 
 // وظيفة الرد بحالة طلب معين
 async function handleSpecificOrderInquiry(phone, orderId) {
-    const { data: order, error } = await _supabase
+    const lang = document.documentElement.lang || 'ar';
+    const t = translations[lang];
+    const { data: order, error } = await _supabase // فلترة الطلبات حسب رقم العميل ورقم الطلب
         .from('orders')
         .select('*')
         .eq('id', orderId)
@@ -1167,6 +1434,28 @@ async function triggerBrowserNotification(messageText) {
     }
 }
 
+// تحديث دالة toggleLanguage لتحديث خيارات المحافظات
+const originalToggleLanguage = toggleLanguage;
+toggleLanguage = async function() {
+    await originalToggleLanguage(); // استدعاء الدالة الأصلية أولاً
+
+    const lang = document.documentElement.lang || 'ar';
+    const provinceSelect = document.getElementById('customer-province');
+    if (provinceSelect) {
+        for (let i = 0; i < provinceSelect.options.length; i++) {
+            const option = provinceSelect.options[i];
+            const arabicName = option.getAttribute('data-ar');
+            if (arabicName) {
+                if (lang === 'en') {
+                    option.innerText = await translateProvinceName(arabicName);
+                } else {
+                    option.innerText = arabicName;
+                }
+            }
+        }
+    }
+};
+
 // وظيفة مراقبة الكروت لظهورها صف بصف عند السكرول
 function observeBookCards() {
     const observer = new IntersectionObserver((entries) => {
@@ -1201,4 +1490,13 @@ function appendMessage(text, side) {
         chatBody.appendChild(msgDiv);
     }
     chatBody.scrollTop = chatBody.scrollHeight;
+}
+
+// وظيفة لإغلاق الدرج العلوي عند النقر على الـ overlay
+function closeTopmostDrawer() {
+    const supportDrawer = document.getElementById('support-drawer');
+    const cartDrawer = document.getElementById('cart-drawer');
+
+    if (supportDrawer && supportDrawer.classList.contains('open')) closeSupport();
+    else if (cartDrawer && cartDrawer.classList.contains('open')) closeCart();
 }
