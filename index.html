@@ -4,6 +4,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>يوتوبيا لاند - عالم عشاق الكتب</title>
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://utopia-land.com/">
+    <meta property="og:title" content="يوتوبيا لاند - عالم عشاق الكتب">
+    <meta property="og:description" content="اكتشف عالمك الخاص بين أرفف يوتوبيا. روايات، فانتازيا، وتنمية ذاتية.">
+    <meta property="og:image" content="https://ywbmamklqyrahwqifqdj.supabase.co/storage/v1/object/public/books-images/55555.jpg">
+
     <!-- خط كايرو الفخم من جوجل -->
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap" rel="stylesheet">
     <!-- أيقونة الموقع (Favicon) -->
@@ -245,6 +252,7 @@
                 <i class="bi bi-phone"></i>
                 <input type="tel" id="chat-phone-input" placeholder="رقم الموبايل (11 رقم)">
             </div>
+            <div id="chat-auth-error" class="validation-error" style="display: none; text-align: center; margin-top: 10px;"></div>
             <button class="confirm-order-btn" style="width: 100%; margin-top: 15px;" onclick="identifyChatUser()">بدء المحادثة</button>
         </div>
         <div class="chat-body" id="chat-body" style="display: none;">
@@ -289,7 +297,7 @@
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
                 navigator.serviceWorker.register('sw.js').then(reg => {
-                    console.log('Service Worker Registered');
+                    console.log('Service Worker Registered');قال
                 }).catch(err => console.log('SW Registration Failed', err));
             });
         }

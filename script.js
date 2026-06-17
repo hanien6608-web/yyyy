@@ -36,6 +36,9 @@ let wishlist = JSON.parse(localStorage.getItem('wishlist')) || []; // قائمة
 let wishlistNewCount = parseInt(localStorage.getItem('wishlistNewCount')) || 0; // عداد المفضلة الجديد
 let supportNewCount = parseInt(localStorage.getItem('supportNewCount')) || 0; // عداد رسائل الدعم الجديدة مع حفظ الحالة
 let currentView = 'home'; // العرض الحالي (الرئيسية أو المفضلة)
+let currentPage = 0;
+const itemsPerPage = 8;
+let hasMore = true;
 let lastProcessedBroadcastId = null; // تعريف المتغير المفقود
 let lastProcessedMsgText = null; // تعريف المتغير المفقود
 
@@ -106,6 +109,7 @@ const shippingPrices = {
 };
 
 document.addEventListener('DOMContentLoaded', () => {
+    const urlParams = new URLSearchParams(window.location.search);
     getMyLibraryData(); // جلب البيانات عند فتح الصفحة
     populateProvinces(); // ملء قائمة المحافظات عند تحميل الصفحة
     updateGlobalCartCount(); // تحديث عداد السلة عند تحميل الصفحة
@@ -115,13 +119,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const savedPhone = localStorage.getItem('user_chat_phone');
     updateGlobalSupportCount();
     if (savedPhone) startChatSync(savedPhone);
-
-    // فحص الرابط عند التحميل لفتح كتاب معين مباشرة (Deep Linking)
-    const urlParams = new URLSearchParams(window.location.search);
-    const bookId = urlParams.get('id');
-    if (bookId && window.fullData) {
-        setTimeout(() => showBookDetails(bookId, false), 1500); 
-    }
     
     // فحص إذا كان المستخدم قادماً من إشعار (والموقع كان مغلقاً)
     if (urlParams.get('openSupport') === 'true') {
@@ -303,6 +300,11 @@ async function getMyLibraryData() {
     window.fullData = shuffledData;
     renderBooksList(shuffledData);
 
+    // فحص الرابط عند التحميل لفتح كتاب معين مباشرة (Deep Linking) بعد جلب البيانات
+    const urlParams = new URLSearchParams(window.location.search);
+    const bookId = urlParams.get('id');
+    if (bookId) showBookDetails(bookId, false);
+
     // تفعيل التحديث اللحظي للكتب (إضافة، تعديل، حذف)
     _supabase.channel('realtime-books').on('postgres_changes', {
         event: '*', 
@@ -377,6 +379,7 @@ function renderBookCard(book, index) {
     const isInWishlist = wishlist.includes(book.id);
     const lang = document.documentElement.lang || 'ar';
     const t = translations[lang];
+    const isSoldOut = book.stock_quantity <= 0;
 
     let displayTitle = book.title;
     let displayAuthor = book.author;
@@ -408,9 +411,12 @@ function renderBookCard(book, index) {
             </div>
             <p class="author-name">${t.by}: ${displayAuthor}</p>
             <p class="book-desc">${displayDesc}</p>
-            <button class="cart-btn" id="add-btn-${book.id}" data-id="${book.id}" onclick="event.stopPropagation(); addItemToCart('${book.id}')">
-                <i class="bi bi-cart-plus"></i>
-            </button>
+            ${isSoldOut ? 
+                `<div class="out-of-stock-badge">نفذت الكمية</div>` : 
+                `<button class="cart-btn" id="add-btn-${book.id}" data-id="${book.id}" onclick="event.stopPropagation(); addItemToCart('${book.id}')">
+                    <i class="bi bi-cart-plus"></i>
+                </button>`
+            }
             <div class="price-cart-container"><div class="price">${book.price} ${t.currency}</div></div>
         </div>`;
 }
@@ -421,10 +427,12 @@ function getRandomBooks(count) {
 }
 
 function getRelatedBooks(currentBook) {
-    if (!window.fullData) return [];
-    return window.fullData.filter(b => 
-        b.category === currentBook.category && String(b.id) !== String(currentBook.id)
-    ).slice(0, 4);
+    if (!window.fullData || !currentBook || !currentBook.category) return [];
+    
+    return window.fullData.filter(b => {
+        // كتب قد تهمك تكون من نفس تصنيف الكتاب المفتوح (مطابقة تامة لسلسلة التصنيف)
+        return b.category === currentBook.category && String(b.id) !== String(currentBook.id);
+    }).slice(0, 4);
 }
 
 function renderSmallCard(book) {
@@ -457,6 +465,7 @@ function showBookDetails(id, shouldPush = true) {
     const content = document.getElementById('details-content');
     const isInWishlist = wishlist.includes(book.id);
     const isInCart = cart.find(i => String(i.id) === String(book.id));
+    const isSoldOut = book.stock_quantity <= 0;
     const img1 = getValidImageUrl(book.image_url);
     const img2 = getValidImageUrl(book.image_url2);
     const has2nd = book.image_url2 && book.image_url2 !== book.image_url;
@@ -493,14 +502,17 @@ function showBookDetails(id, shouldPush = true) {
             <p class="full-desc">${book.description || 'لا يوجد وصف متاح لهذا الكتاب حالياً في يوتوبيا لاند.'}</p>
             <div style="font-size: 2rem; color: var(--paper-light); margin-bottom: 25px; font-weight: bold;">${book.price} ج.م</div>
             <div class="details-actions">
-                <div class="details-qty-container">
-                    <button class="qty-btn-det" onclick="updateDetQty(-1)"><i class="bi bi-dash"></i></button>
-                    <span id="det-qty-val" style="font-size: 1.6rem; font-weight: bold; color: var(--paper-light); min-width: 30px; text-align: center;">1</span>
-                    <button class="qty-btn-det" onclick="updateDetQty(1)"><i class="bi bi-plus"></i></button>
-                </div>
-                <button id="details-add-btn" class="shop-now-btn ${isInCart ? 'success' : ''}" style="flex: 1; min-width: 200px;" onclick="addItemToCart('${book.id}', currentDetailsQty)">
-                    ${isInCart ? '<i class="bi bi-check-lg"></i> تم الإضافة' : '<i class="bi bi-cart-plus"></i> إضافة للسلة'}
-                </button>
+                ${isSoldOut ? 
+                    `<div class="out-of-stock-badge" style="font-size: 1.3rem; padding: 15px 40px; flex: 1; text-align: center;">نفذت الكمية من يوتوبيا 🌸</div>` :
+                    `<div class="details-qty-container">
+                        <button class="qty-btn-det" onclick="updateDetQty(-1)"><i class="bi bi-dash"></i></button>
+                        <span id="det-qty-val" style="font-size: 1.6rem; font-weight: bold; color: var(--paper-light); min-width: 30px; text-align: center;">1</span>
+                        <button class="qty-btn-det" onclick="updateDetQty(1)"><i class="bi bi-plus"></i></button>
+                    </div>
+                    <button id="details-add-btn" class="shop-now-btn ${isInCart ? 'success' : ''}" style="flex: 1; min-width: 200px;" onclick="addItemToCart('${book.id}', currentDetailsQty)">
+                        ${isInCart ? '<i class="bi bi-check-lg"></i> تم الإضافة' : '<i class="bi bi-cart-plus"></i> إضافة للسلة'}
+                    </button>`
+                }
                 <button id="details-wish-btn" class="wish-btn-large ${isInWishlist ? 'active' : ''}" onclick="toggleWishlist(${book.id}); updateDetailsWishBtn(${book.id})">
                     <i id="details-wish-icon" class="bi bi-bookmark-heart"></i>
                 </button>
@@ -508,12 +520,12 @@ function showBookDetails(id, shouldPush = true) {
         </div>
         <div class="extra-sections-wrapper" style="grid-column: 1 / -1;">
             <div class="section-header"><i class="bi bi-fire"></i><span>الأكثر مبيعاً في يوتوبيا</span></div>
-            <div class="books-grid" style="grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 40px;">
-                ${getRandomBooks(4).map(b => renderSmallCard(b)).join('')}
+            <div class="books-grid" style="gap: 15px; margin-bottom: 40px;">
+                ${getRandomBooks(4).map((b, i) => renderBookCard(b, i)).join('')}
             </div>
             <div class="section-header"><i class="bi bi-lightbulb-fill"></i><span>كتب قد تهمك</span></div>
-            <div class="books-grid" style="grid-template-columns: repeat(2, 1fr); gap: 10px;">
-                ${getRelatedBooks(book).map(b => renderSmallCard(b)).join('')}
+            <div class="books-grid" style="gap: 15px;">
+                ${getRelatedBooks(book).map((b, i) => renderBookCard(b, i)).join('')}
             </div>
         </div>
     `;
@@ -529,6 +541,7 @@ function showBookDetails(id, shouldPush = true) {
     document.documentElement.classList.add('lock-scroll');
     if (shouldPush) pushNavigationState('details', { id: book.id });
     detailsPage.scrollTo(0,0);
+    setTimeout(observeBookCards, 300); // تفعيل ظهور الكروت الصغيرة في صفحة التفاصيل
 }
 
 function slideDetails(index) {
@@ -877,11 +890,70 @@ function closeSupport(shouldGoBack = true) {
     if (shouldGoBack && window.history.state?.view === 'support') window.history.back();
 }
 
-function identifyChatUser() {
-    const phoneInput = document.getElementById('chat-phone-input').value.trim();
-    const phone = phoneInput.replace(/\D/g, ''); // تنظيف الرقم
-    if (/^(010|011|012|015)[0-9]{8}$/.test(phone)) { localStorage.setItem('user_chat_phone', phone); showSupport(); }
-    else alert("من فضلكِ أدخلي رقم موبايل مصري صحيح.");
+async function identifyChatUser() {
+    const phoneInput = document.getElementById('chat-phone-input');
+    const errorDiv = document.getElementById('chat-auth-error'); 
+    const btn = phoneInput.closest('#chat-auth-section').querySelector('.confirm-order-btn');
+    const rawPhone = phoneInput.value.trim().replace(/\D/g, '');
+    
+    // إخفاء رسالة الخطأ فور بدء الكتابة مرة أخرى لتحسين التجربة
+    phoneInput.addEventListener('input', () => {
+        errorDiv.style.display = 'none';
+        errorDiv.innerHTML = '';
+    }, { once: true });
+
+    // تنظيف الرقم من أي كود دولة للحصول على الـ 11 رقم الأساسية
+    let cleanPhone = rawPhone;
+    if (cleanPhone.startsWith('20') && cleanPhone.length > 11) cleanPhone = cleanPhone.substring(2);
+    if (!cleanPhone.startsWith('0') && cleanPhone.length === 10) cleanPhone = '0' + cleanPhone;
+
+    errorDiv.style.display = 'none'; 
+    errorDiv.innerHTML = '';
+
+    if (!/^(010|011|012|015)[0-9]{8}$/.test(cleanPhone)) {
+        errorDiv.innerHTML = '<i class="bi bi-exclamation-triangle-fill"></i> يرجى إدخال رقم موبايل مصري صحيح (11 رقم) 📱'; 
+        errorDiv.style.display = 'block';
+        return;
+    }
+
+    try {
+        btn.disabled = true;
+        btn.innerHTML = 'جاري التحقق من بياناتك... <i class="bi bi-hourglass-split"></i>';
+        
+        // البحث عن الرقم بكل أشكاله الممكنة (بصفر، بدون صفر، أو جزء من الرقم)
+        const searchPart = cleanPhone.substring(1); // الـ 10 أرقام بدون الصفر
+        const { data: orders, error } = await _supabase
+            .from('orders')
+            .select('customer_phone, customer_whatsapp, id')
+            .or(`customer_phone.ilike.%${searchPart}%,customer_whatsapp.ilike.%${searchPart}%`);
+
+        if (error) throw error;
+
+        if (!orders || orders.length === 0) {
+            errorDiv.innerHTML = `
+                <div style="display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 8px;">
+                    <i class="bi bi-search-heart" style="color: #ffdada; font-size: 1.2rem;"></i>
+                    <b style="font-size: 0.9rem;">الرقم (${cleanPhone}) غير مسجل لدينا.</b>
+                </div>
+                <p style="font-size: 0.8rem; opacity: 0.9; line-height: 1.6; margin: 0 5px;">هذا الرقم غير مرتبط بأي طلبات سابقة. يرجى إتمام طلبكِ الأول لتفعيل خدمات الدعم الفني وتتبع الشحنات، أو التأكد من صحة الرقم المدخل. ✨</p>
+                <a href="https://wa.me/201551455490" target="_blank" style="color: #ffdada; text-decoration: none; font-weight: bold; border: 1.5px solid #ff4d4d; padding: 6px 18px; border-radius: 25px; display: inline-block; margin-top: 12px; font-size: 0.75rem; background: rgba(255,0,0,0.15); transition: 0.3s;">
+                    <i class="bi bi-whatsapp"></i> مساعدة فورية عبر واتساب
+                </a>
+            `;
+            errorDiv.style.display = 'block';
+        } else {
+            const primaryPhone = orders[0].customer_phone;
+            localStorage.setItem('user_chat_phone', primaryPhone);
+            showSupport(); 
+        }
+    } catch (err) {
+        console.error(err);
+        errorDiv.innerText = "حدث خطأ بسيط في الاتصال، حاولي مرة أخرى.";
+        errorDiv.style.display = 'block';
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = 'بدء المحادثة';
+    }
 }
 
 async function startChatSync(phone) {
@@ -992,6 +1064,86 @@ async function sendMessage() {
 
     appendMessage(text, 'user'); input.value = '';
     await _supabase.from('messages').insert([{ customer_phone: phone, sender: 'user', text: text }]);
+
+    // --- نظام الرد التلقائي الذكي (Utopia Bot) ---
+    if (text === 'الأوردر بتاعي لسه موصلش؟ 🚚') {
+        setTimeout(() => handleAutoOrderInquiry(phone), 1000);
+    } else if (/^\d+$/.test(text)) { // إذا كتب العميل أرقام فقط (يفترض أنها رقم طلب)
+        setTimeout(() => handleSpecificOrderInquiry(phone, text), 1000);
+    }
+}
+
+// وظيفة الرد التلقائي بقائمة الطلبات
+async function handleAutoOrderInquiry(phone) {
+    const { data: orders, error } = await _supabase
+        .from('orders')
+        .select('*')
+        .eq('customer_phone', phone)
+        .order('created_at', { ascending: false });
+
+    if (error || !orders || orders.length === 0) {
+        await sendAdminAutoReply(phone, "لم نجد أي طلبات مسجلة لهذا الرقم حتى الآن. تأكدي من إدخال الرقم الصحيح الذي سجلتِ به الطلب ✨");
+        return;
+    }
+
+    let reply = `أهلاً بكِ! لقد وجدتُ ${orders.length} طلبات مرتبطة برقمك:\n\n`;
+    orders.forEach(o => {
+        const itemsList = o.items.map(i => `${i.title} (x${i.qty})`).join('، ');
+        reply += `📌 طلب رقم: ${o.id}\nمحتويات الطلب: ${itemsList}\n\n`;
+    });
+    reply += "عن أي طلب تودين الاستفسار؟ من فضلكِ أرسلي (رقم الطلب فقط) للمتابعة.";
+    
+    await sendAdminAutoReply(phone, reply);
+}
+
+// وظيفة الرد بحالة طلب معين
+async function handleSpecificOrderInquiry(phone, orderId) {
+    const { data: order, error } = await _supabase
+        .from('orders')
+        .select('*')
+        .eq('id', orderId)
+        .eq('customer_phone', phone)
+        .maybeSingle();
+
+    if (error || !order) return; // لا نرد إذا لم يخص الرقم أو غير موجود لعدم الإزعاج
+
+    const statusMap = { 
+        'pending': 'جديد (جاري المراجعة والتجهيز) ⏳', 
+        'shipping': 'جاري التنسيق مع شركة الشحن 🚚', 
+        'shipped': 'تم الشحن وهو في الطريق إليكِ الآن 📦', 
+        'completed': 'تم التوصيل بنجاح.. نتمنى أن تنال الكتب إعجابكِ ✅', 
+        'returned': 'تم إرجاع الطلب 🛑' 
+    };
+    const statusText = statusMap[order.status] || order.status;
+
+    let reply = `بخصوص طلبك رقم #${orderId}:\n`;
+    reply += `الحالة الحالية: ${statusText}.\n\n`;
+    reply += "إذا كان لديكِ أي استفسار آخر، اتركيه هنا وسنتواصل معكِ في أقرب وقت ممكن ✨";
+
+    await sendAdminAutoReply(phone, reply);
+}
+
+// وظيفة مساعدة لإرسال رد من الأدمن برمجياً
+async function sendAdminAutoReply(phone, text) {
+    const msgId = Date.now();
+
+    // تحديث معرّفات منع التكرار محلياً قبل الإرسال
+    // هذا يمنع المستمع (Listener) من إضافة الرسالة مرة أخرى عند وصولها من قاعدة البيانات
+    lastProcessedBroadcastId = msgId;
+    lastProcessedMsgText = text;
+
+    // 1. إرسال بث مباشر ليظهر عند العميل فوراً
+    if (chatSubscription) {
+        chatSubscription.send({ 
+            type: 'broadcast', 
+            event: 'msg', 
+            payload: { text, sender: 'admin', msgId } 
+        });
+    }
+    // 2. عرضه في الشات الحالي
+    appendMessage(text, 'admin');
+    // 3. حفظه في قاعدة البيانات ليظهر للأدمن
+    await _supabase.from('messages').insert([{ customer_phone: phone, sender: 'admin', text }]);
 }
 
 // وظيفة إرسال إشعار للمتصفح مثل الواتساب

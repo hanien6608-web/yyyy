@@ -610,7 +610,7 @@ header {
 
 /* شكل علامة نفذت الكمية */
 .out-of-stock-badge {
-    background: #e74c3c;
+    background: #800000; /* تغيير اللون للبورجوندي الملكي */
     color: white;
     font-size: 0.75rem;
     font-weight: bold;
@@ -716,15 +716,25 @@ footer {
 .social-links a {
     text-decoration: none;
     color: var(--text-main);
-    font-size: 0.9rem;
+    font-size: 1.8rem; /* تكبير الأيقونات */
     display: flex;
     align-items: center;
-    gap: 8px;
 }
 
 .social-links a:hover {
     color: var(--accent-wood);
     transform: translateY(-3px);
+}
+
+.dev-badge {
+    background: var(--accent-wood);
+    color: var(--wood-dark);
+    display: inline-block;
+    padding: 4px 15px;
+    border-radius: 50px;
+    font-weight: 900;
+    font-size: 0.8rem;
+    margin-bottom: 15px;
 }
 
 .bottom-bar {
@@ -977,6 +987,22 @@ footer {
     display: none;
 }
 
+/* استايل رسالة خطأ الشات الفخمة */
+#chat-auth-error {
+    background: rgba(80, 0, 0, 0.9); /* أحمر داكن فخم */
+    border: 1.5px solid #ff4d4d; /* حدود حمراء متوهجة */
+    color: #ffdada;
+    padding: 15px; /* تقليل المسافات الداخلية */
+    border-radius: 15px; /* حواف أنعم قليلاً */
+    font-size: 0.85rem; /* تصغير الخط العام */
+    line-height: 1.5;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.6), inset 0 0 10px rgba(255, 77, 77, 0.1);
+    text-align: center;
+    margin: 10px 0;
+    animation: fadeInUp 0.4s ease-out;
+    border-right: 4px solid #ff4d4d; /* لمسة جمالية أنحف */
+}
+
 .styled-select {
     width: 100%;
     padding: 12px 45px 12px 15px;
@@ -1101,7 +1127,7 @@ footer {
     transform: translateX(-50%);
     width: 95%;
     max-width: 450px;
-    height: 70vh;
+    height: 85vh; /* زيادة الارتفاع ليظهر الشات كاملاً */
     background: var(--card-bg);
     backdrop-filter: blur(40px);
     z-index: 100000;
@@ -1110,7 +1136,7 @@ footer {
     border: 2px solid rgba(212, 163, 115, 0.4);
     display: flex;
     flex-direction: column;
-    padding: 20px;
+    padding: 20px 20px 30px; /* زيادة التباعد السفلي لضمان ظهور صندوق الكتابة */
     box-shadow: 0 -15px 40px rgba(0,0,0,0.6);
 }
 .support-drawer.open { bottom: 0; }
