@@ -1218,6 +1218,19 @@ async function identifyChatUser() {
     }
 }
 
+// منع تكرار الرسالة الواحدة لو وصلت من مسارين (بث مباشر + قاعدة بيانات)
+// من غير ما نمنع إرسال نفس النص مرتين: كل مسار بيلغي نسخة المسار التاني بس
+const _dupMarks = [];
+function isDuplicateArrival(text, src) {
+    const now = Date.now();
+    for (let i = _dupMarks.length - 1; i >= 0; i--) if (now - _dupMarks[i].t > 6000) _dupMarks.splice(i, 1);
+    const other = src === 'b' ? 'd' : 'b';
+    const idx = _dupMarks.findIndex(m => m.text === text && m.src === other);
+    if (idx !== -1) { _dupMarks.splice(idx, 1); return true; }
+    _dupMarks.push({ text, src, t: now });
+    return false;
+}
+
 async function startChatSync(phone) {
     if (chatSubscription) return;
     primeChatAudio(); // تأكيد تفعيل الصوت عند بدء المزامنة
@@ -1225,7 +1238,7 @@ async function startChatSync(phone) {
     const chatBody = document.getElementById('chat-body');
 
     // 1. تحميل تاريخ الرسائل
-    const { data, error } = await _supabase.from('messages').select('*').eq('customer_phone', phone).order('created_at', { ascending: true }); // فلترة الرسائل حسب رقم العميل
+    const { data, error } = await _supabase.rpc('chat_history', { p_phone: phone }); // تاريخ المحادثة عبر دالة آمنة
     
     // تصفير عداد الرسائل الجديدة عند فتح الشات وقراءة الرسائل
     supportNewCount = 0; localStorage.setItem('supportNewCount', 0); updateGlobalSupportCount();
@@ -1250,8 +1263,7 @@ async function startChatSync(phone) {
         .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages', filter: `customer_phone=eq.${phone}` }, payload => {
             if (payload.eventType === 'INSERT' && payload.new.sender === 'admin') {
                 // منع التكرار: إذا كان نص الرسالة هو نفس آخر نص استلمناه عبر البث، نتجاهله
-                if (payload.new.text === lastProcessedMsgText) return;
-                lastProcessedMsgText = payload.new.text;
+                if (isDuplicateArrival(payload.new.text, 'd')) return;
 
                 if (!document.getElementById('support-drawer').classList.contains('open')) { supportNewCount++; localStorage.setItem('supportNewCount', supportNewCount); updateGlobalSupportCount(); }
                 chatSound.currentTime = 0; chatSound.play().catch(()=>{}); appendMessage(payload.new.text, 'admin');
@@ -1260,11 +1272,9 @@ async function startChatSync(phone) {
         .on('broadcast', { event: 'msg' }, payload => { 
             if (payload.payload.sender === 'admin') { 
                 // منع التكرار بناءً على معرف فريد وليس النص
-                if (payload.payload.msgId === lastProcessedBroadcastId) return;
-                lastProcessedBroadcastId = payload.payload.msgId;
+                if (isDuplicateArrival(payload.payload.text, 'b')) return;
 
                 // تحديث آخر نص استلمناه لمنع تكرار الرسالة القادمة من قاعدة البيانات
-                lastProcessedMsgText = payload.payload.text;
 
                 // تحديث عداد الإشعارات إذا كان الشات مغلقاً (زي نظام المفضلة)
                 if (!document.getElementById('support-drawer').classList.contains('open')) {
@@ -1332,7 +1342,8 @@ async function sendMessage() {
     }
 
     appendMessage(text, 'user'); input.value = '';
-    await _supabase.from('messages').insert([{ customer_phone: phone, sender: 'user', text: text }]);
+    const { error: sendErr } = await _supabase.rpc('chat_send', { p_phone: phone, p_text: text });
+    if (sendErr) console.error('chat_send failed:', sendErr);
 
     // --- نظام الرد التلقائي الذكي (Utopia Bot) ---
     if (text === 'الأوردر بتاعي لسه موصلش؟ 🚚') {
@@ -1344,56 +1355,16 @@ async function sendMessage() {
 
 // وظيفة الرد التلقائي بقائمة الطلبات
 async function handleAutoOrderInquiry(phone) {
-    const { data: orders, error } = await _supabase
-        .from('orders')
-        .select('*')
-        .eq('customer_phone', phone)
-        .order('created_at', { ascending: false }); // فلترة الطلبات حسب رقم العميل
-    const lang = document.documentElement.lang || 'ar';
-    const t = translations[lang];
-
-    if (error || !orders || orders.length === 0) {
-        await sendAdminAutoReply(phone, "لم نجد أي طلبات مسجلة لهذا الرقم حتى الآن. تأكدي من إدخال الرقم الصحيح الذي سجلتِ به الطلب ✨");
-        return;
-    }
-
-    let reply = `أهلاً بكِ! لقد وجدتُ ${orders.length} طلبات مرتبطة برقمك:\n\n`;
-    orders.forEach(o => {
-        const itemsList = o.items.map(i => `${i.title} (x${i.qty})`).join('، ');
-        reply += `📌 طلب رقم: ${o.id}\nمحتويات الطلب: ${itemsList}\n\n`;
-    });
-    reply += "عن أي طلب تودين الاستفسار؟ من فضلكِ أرسلي (رقم الطلب فقط) للمتابعة.";
-    
-    await sendAdminAutoReply(phone, reply);
+    const { data: reply, error } = await _supabase.rpc('chat_bot_orders', { p_phone: phone });
+    if (error || !reply) { console.error(error); return; }
+    appendMessage(reply, 'admin');
 }
 
 // وظيفة الرد بحالة طلب معين
 async function handleSpecificOrderInquiry(phone, orderId) {
-    const lang = document.documentElement.lang || 'ar';
-    const t = translations[lang];
-    const { data: order, error } = await _supabase // فلترة الطلبات حسب رقم العميل ورقم الطلب
-        .from('orders')
-        .select('*')
-        .eq('id', orderId)
-        .eq('customer_phone', phone)
-        .maybeSingle();
-
-    if (error || !order) return; // لا نرد إذا لم يخص الرقم أو غير موجود لعدم الإزعاج
-
-    const statusMap = { 
-        'pending': 'جديد (جاري المراجعة والتجهيز) ⏳', 
-        'shipping': 'جاري التنسيق مع شركة الشحن 🚚', 
-        'shipped': 'تم الشحن وهو في الطريق إليكِ الآن 📦', 
-        'completed': 'تم التوصيل بنجاح.. نتمنى أن تنال الكتب إعجابكِ ✅', 
-        'returned': 'تم إرجاع الطلب 🛑' 
-    };
-    const statusText = statusMap[order.status] || order.status;
-
-    let reply = `بخصوص طلبك رقم #${orderId}:\n`;
-    reply += `الحالة الحالية: ${statusText}.\n\n`;
-    reply += "إذا كان لديكِ أي استفسار آخر، اتركيه هنا وسنتواصل معكِ في أقرب وقت ممكن ✨";
-
-    await sendAdminAutoReply(phone, reply);
+    const { data: reply, error } = await _supabase.rpc('chat_bot_order_status', { p_phone: phone, p_order_id: String(orderId) });
+    if (error || !reply) return; // لا نرد إذا الطلب مش بتاع الرقم ده أو مش موجود
+    appendMessage(reply, 'admin');
 }
 
 // وظيفة مساعدة لإرسال رد من الأدمن برمجياً
