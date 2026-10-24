@@ -1188,15 +1188,11 @@ async function identifyChatUser() {
         btn.innerHTML = 'جاري التحقق من بياناتك... <i class="bi bi-hourglass-split"></i>';
         
         // البحث عن الرقم بكل أشكاله الممكنة (بصفر، بدون صفر، أو جزء من الرقم)
-        const searchPart = cleanPhone.substring(1); // الـ 10 أرقام بدون الصفر
-        const { data: orders, error } = await _supabase
-            .from('orders')
-            .select('customer_phone, customer_whatsapp, id')
-            .or(`customer_phone.ilike.%${searchPart}%,customer_whatsapp.ilike.%${searchPart}%`);
+        const { data: primaryPhone, error } = await _supabase.rpc('get_chat_phone', { p_phone: cleanPhone });
 
         if (error) throw error;
 
-        if (!orders || orders.length === 0) {
+        if (!primaryPhone) {
             errorDiv.innerHTML = `
                 <div style="display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 8px;">
                     <i class="bi bi-search-heart" style="color: #ffdada; font-size: 1.2rem;"></i>
@@ -1209,7 +1205,6 @@ async function identifyChatUser() {
             `;
             errorDiv.style.display = 'block';
         } else {
-            const primaryPhone = orders[0].customer_phone;
             localStorage.setItem('user_chat_phone', primaryPhone);
             showSupport(); 
         }
