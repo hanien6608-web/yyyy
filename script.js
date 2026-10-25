@@ -1136,7 +1136,11 @@ function showSupport() {
     const cartPhone = cartPhoneInput ? cartPhoneInput.value.trim().replace(/\D/g, '') : ''; const phoneToUse = savedPhone || cartPhone;
     if (phoneToUse) {
         document.getElementById('chat-auth-section').style.display = 'none'; document.getElementById('end-chat-btn').style.display = 'block';
-        document.getElementById('chat-body').style.display = 'flex'; startChatSync(phoneToUse);
+        document.getElementById('chat-body').style.display = 'flex';
+        // فتح الشات = قراءة الرسائل: نصفّر العدّاد، ونحدّث المحادثة من السيرفر، ونبعت أي رسالة معلّقة
+        supportNewCount = 0; localStorage.setItem('supportNewCount', 0); markSeenNow(); updateGlobalSupportCount();
+        if (chatSubscription) loadChatHistory(phoneToUse.replace(/\D/g, '')); else startChatSync(phoneToUse);
+        flushOutbox();
     } else {
         document.getElementById('chat-auth-section').style.display = 'block'; document.getElementById('end-chat-btn').style.display = 'none';
         document.getElementById('chat-body').style.display = 'none';
@@ -1231,48 +1235,141 @@ function isDuplicateArrival(text, src) {
     return false;
 }
 
+/* ===== ضمان وصول الرسائل: صندوق صادر محفوظ + معرّف فريد لكل رسالة + عدّاد غير المقروء ===== */
+(function () {
+    const st = document.createElement('style');
+    st.textContent = '.msg-pending{opacity:.55}.msg-failed{opacity:.75;outline:1px dashed #e74c3c}';
+    document.head.appendChild(st);
+})();
+
+const OUTBOX_KEY = 'chat_outbox';
+const SEEN_KEY = 'chat_seen_at';
+const renderedCids = new Set();
+let _flushing = false, _flushTimer = null, _chatStarting = false, _historyLoading = false;
+
+function newMsgId() {
+    return (window.crypto && crypto.randomUUID) ? crypto.randomUUID()
+        : 'm' + Date.now().toString(36) + Math.random().toString(36).slice(2, 10);
+}
+function getOutbox() { try { return JSON.parse(localStorage.getItem(OUTBOX_KEY)) || []; } catch (e) { return []; } }
+function setOutbox(a) { try { localStorage.setItem(OUTBOX_KEY, JSON.stringify(a)); } catch (e) {} }
+function isSupportOpen() { const d = document.getElementById('support-drawer'); return !!(d && d.classList.contains('open')); }
+function markSeenNow() { try { localStorage.setItem(SEEN_KEY, String(Date.now())); } catch (e) {} }
+
+// منع تكرار نفس الرسالة لو وصلت من مسارين: بالمعرّف الفريد، وللرسائل القديمة بالمصدر
+function isDupMsg(cid, text, src) {
+    if (cid) { if (renderedCids.has(cid)) return true; renderedCids.add(cid); return false; }
+    return isDuplicateArrival(text, src);
+}
+function setMsgState(cid, state) {
+    document.querySelectorAll('[data-cid="' + cid + '"]').forEach(el => {
+        el.classList.remove('msg-pending', 'msg-failed');
+        if (state) el.classList.add('msg-' + state);
+    });
+}
+function scheduleFlush() { clearTimeout(_flushTimer); _flushTimer = setTimeout(flushOutbox, 8000); }
+
+// إرسال كل الرسائل المعلّقة: لو مفيش نت بتفضل محفوظة وتتبعت لوحدها لما النت يرجع
+async function flushOutbox() {
+    if (_flushing) return;
+    _flushing = true;
+    try {
+        for (const item of getOutbox()) {
+            let error = null;
+            try {
+                ({ error } = await _supabase.rpc('chat_send', { p_phone: item.phone, p_text: item.text, p_client_id: item.cid }));
+            } catch (e) { error = { message: String(e) }; }
+            if (!error) {
+                setOutbox(getOutbox().filter(i => i.cid !== item.cid));
+                setMsgState(item.cid, null);
+                continue;
+            }
+            const retryable = !navigator.onLine || !error.code || ['PGRST202', '42883'].includes(error.code)
+                || /fetch|network|load failed|timeout/i.test(error.message || '');
+            if (retryable) break;
+            item.attempts = (item.attempts || 0) + 1;
+            if (item.attempts >= 5) {
+                setOutbox(getOutbox().filter(i => i.cid !== item.cid));
+                setMsgState(item.cid, 'failed');
+            } else {
+                setOutbox(getOutbox().map(i => i.cid === item.cid ? item : i));
+            }
+        }
+    } finally { _flushing = false; }
+    if (getOutbox().length) scheduleFlush();
+}
+
+// حساب غير المقروء من السيرفر: رسائل الأدمن الأحدث من آخر مرة العميل شافها
+function updateUnreadFromHistory(rows, drawerOpen) {
+    const ts = m => Date.parse(m.created_at) || 0;
+    const latest = rows.reduce((a, m) => Math.max(a, ts(m)), 0);
+    let seen = parseInt(localStorage.getItem(SEEN_KEY)) || 0;
+    if (drawerOpen) {
+        supportNewCount = 0;
+        localStorage.setItem(SEEN_KEY, String(Math.max(latest, Date.now())));
+    } else {
+        if (!seen) {
+            const lastUser = rows.filter(m => m.sender === 'user').reduce((a, m) => Math.max(a, ts(m)), 0);
+            seen = lastUser || latest;
+            localStorage.setItem(SEEN_KEY, String(seen));
+        }
+        supportNewCount = rows.filter(m => m.sender === 'admin' && ts(m) > seen).length;
+    }
+    localStorage.setItem('supportNewCount', supportNewCount);
+    updateGlobalSupportCount();
+}
+
+// تحميل المحادثة من السيرفر وعرضها (ومعاها الرسائل اللي لسه ما اتبعتتش)
+async function loadChatHistory(phone) {
+    if (_historyLoading) return;
+    _historyLoading = true;
+    try {
+        const chatBody = document.getElementById('chat-body');
+        const { data, error } = await _supabase.rpc('chat_history', { p_phone: phone });
+        if (error) { console.error('Error loading history:', error); return; } // لو فشل التحميل منمسحش اللي معروض
+        const rows = data || [];
+        updateUnreadFromHistory(rows, isSupportOpen());
+        chatBody.querySelectorAll('.msg').forEach(m => m.remove());
+        renderedCids.clear();
+        if (rows.length) {
+            rows.forEach(m => { if (m.client_id) renderedCids.add(m.client_id); appendMessage(m.text, m.sender, m.client_id); });
+        } else {
+            appendMessage('أهلاً بكِ مجدداً! ✨ كيف يمكننا مساعدتكِ؟', 'admin');
+        }
+        getOutbox().filter(i => !renderedCids.has(i.cid)).forEach(i => { renderedCids.add(i.cid); appendMessage(i.text, 'user', i.cid, 'pending'); });
+        setTimeout(() => { chatBody.scrollTop = chatBody.scrollHeight; }, 100);
+    } finally { _historyLoading = false; }
+}
+function resyncChat() {
+    const p = localStorage.getItem('user_chat_phone');
+    if (p && chatSubscription) loadChatHistory(p.replace(/\D/g, ''));
+}
+window.addEventListener('online', () => { flushOutbox(); resyncChat(); });
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') { flushOutbox(); resyncChat(); } });
+setTimeout(() => { if (getOutbox().length) flushOutbox(); }, 3000);
+
 async function startChatSync(phone) {
-    if (chatSubscription) return;
+    if (chatSubscription || _chatStarting) return;
+    _chatStarting = true;
     primeChatAudio(); // تأكيد تفعيل الصوت عند بدء المزامنة
     phone = phone.replace(/\D/g, '');
-    const chatBody = document.getElementById('chat-body');
 
-    // 1. تحميل تاريخ الرسائل
-    const { data, error } = await _supabase.rpc('chat_history', { p_phone: phone }); // تاريخ المحادثة عبر دالة آمنة
-    
-    // تصفير عداد الرسائل الجديدة عند فتح الشات وقراءة الرسائل
-    supportNewCount = 0; localStorage.setItem('supportNewCount', 0); updateGlobalSupportCount();
-    if (error) console.error("Error loading history:", error);
-
-    // تنظيف الرسائل القديمة فقط مع الحفاظ على مؤشر الكتابة
-    const oldMsgs = chatBody.querySelectorAll('.msg');
-    oldMsgs.forEach(m => m.remove());
-    
-    if (data && data.length > 0) { 
-        data.forEach(m => appendMessage(m.text, m.sender)); 
-        // سكرول لآخر رسالة بعد تحميل التاريخ
-        // إذا كانت آخر رسالة من الأدمن، لا نزيد العداد
-        if (data[data.length - 1].sender === 'admin') supportNewCount = 0;
-        setTimeout(() => { chatBody.scrollTop = chatBody.scrollHeight; }, 100);
-    } else {
-        appendMessage('أهلاً بكِ مجدداً! ✨ كيف يمكننا مساعدتكِ؟', 'admin');
-    }
+    // 1. تحميل تاريخ الرسائل من السيرفر + حساب غير المقروء
+    try { await loadChatHistory(phone); } catch (e) { console.error(e); }
 
     // 2. الاشتراك في القناة الموحدة
     chatSubscription = _supabase.channel(`support_chat_${phone}`, { config: { broadcast: { self: false } } })
         .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages', filter: `customer_phone=eq.${phone}` }, payload => {
             if (payload.eventType === 'INSERT' && payload.new.sender === 'admin') {
-                // منع التكرار: إذا كان نص الرسالة هو نفس آخر نص استلمناه عبر البث، نتجاهله
-                if (isDuplicateArrival(payload.new.text, 'd')) return;
+                if (isDupMsg(payload.new.client_id, payload.new.text, 'd')) return;
 
                 if (!document.getElementById('support-drawer').classList.contains('open')) { supportNewCount++; localStorage.setItem('supportNewCount', supportNewCount); updateGlobalSupportCount(); }
-                chatSound.currentTime = 0; chatSound.play().catch(()=>{}); appendMessage(payload.new.text, 'admin');
+                chatSound.currentTime = 0; chatSound.play().catch(()=>{}); appendMessage(payload.new.text, 'admin', payload.new.client_id);
             }
         })
         .on('broadcast', { event: 'msg' }, payload => { 
             if (payload.payload.sender === 'admin') { 
-                // منع التكرار بناءً على معرف فريد وليس النص
-                if (isDuplicateArrival(payload.payload.text, 'b')) return;
+                if (isDupMsg(payload.payload.cid, payload.payload.text, 'b')) return;
 
                 // تحديث آخر نص استلمناه لمنع تكرار الرسالة القادمة من قاعدة البيانات
 
@@ -1284,7 +1381,7 @@ async function startChatSync(phone) {
                 }
 
                 chatSound.currentTime = 0; chatSound.play().catch(()=>{}); 
-                appendMessage(payload.payload.text, 'admin'); // تم تعديل payload.new.text إلى payload.payload.text
+                appendMessage(payload.payload.text, 'admin', payload.payload.cid);
                 
                 // إظهار إشعار لو الصفحة مقفولة أو في الخلفية
                 triggerBrowserNotification(payload.payload.text);
@@ -1311,11 +1408,12 @@ async function startChatSync(phone) {
             document.getElementById('chat-body').innerHTML = '<div class="msg msg-admin" style="opacity:0.6; align-self:center; text-align:center; width: 100%;">تم تنظيف المحادثة... ✨</div>'; 
         })
         .subscribe();
+    _chatStarting = false;
 }
 
 function endChat() {
     if(!confirm("هل أنتِ متأكدة من إنهاء الدردشة؟ سيتم مسح بيانات الدخول.")) return;
-    localStorage.removeItem('user_chat_phone');
+    localStorage.removeItem('user_chat_phone'); localStorage.removeItem(OUTBOX_KEY); localStorage.removeItem(SEEN_KEY);
     if (chatSubscription) { _supabase.removeAllChannels(); chatSubscription = null; }
     document.getElementById('chat-body').innerHTML = ''; showSupport();
 }
@@ -1332,18 +1430,20 @@ async function sendMessage() {
     if (!phone) { alert(t.phoneRequiredAlert); showSupport(); return; }
     if (!chatSubscription) await startChatSync(phone);
 
-    // إرسال الرسالة عبر البث المباشر فوراً لسرعة الاستجابة عند الأدمن
+    // كل رسالة ليها معرّف فريد، وبتتحفظ محلياً لحد ما تتأكد إنها وصلت للسيرفر (حتى لو مفيش نت)
+    const cid = newMsgId();
     if (chatSubscription) {
-        chatSubscription.send({ 
-            type: 'broadcast', 
-            event: 'msg', 
-            payload: { text, sender: 'user', msgId: Date.now() } 
-        });
+        try {
+            Promise.resolve(chatSubscription.send({
+                type: 'broadcast', event: 'msg',
+                payload: { text, sender: 'user', msgId: cid, cid }
+            })).catch(() => {});
+        } catch (e) {}
     }
-
-    appendMessage(text, 'user'); input.value = '';
-    const { error: sendErr } = await _supabase.rpc('chat_send', { p_phone: phone, p_text: text });
-    if (sendErr) console.error('chat_send failed:', sendErr);
+    renderedCids.add(cid);
+    appendMessage(text, 'user', cid, 'pending'); input.value = '';
+    const ob = getOutbox(); ob.push({ cid, phone, text, ts: Date.now(), attempts: 0 }); setOutbox(ob);
+    await flushOutbox();
 
     // --- نظام الرد التلقائي الذكي (Utopia Bot) ---
     if (text === 'الأوردر بتاعي لسه موصلش؟ 🚚') {
@@ -1453,11 +1553,12 @@ renderBooksList = function(data) {
     observeBookCards();
 };
 
-function appendMessage(text, side) {
+function appendMessage(text, side, cid, state) {
     const chatBody = document.getElementById('chat-body');
     const indicator = document.getElementById('client-typing-indicator');
     const msgDiv = document.createElement('div');
-    msgDiv.className = `msg msg-${side}`;
+    msgDiv.className = `msg msg-${side}` + (state ? ` msg-${state}` : '');
+    if (cid) msgDiv.dataset.cid = cid;
     msgDiv.innerText = text;
 
     // ضمان إضافة الرسالة قبل فقاعة "جاري الكتابة" لتبقى الفقاعة دائماً في الأسفل
@@ -1467,6 +1568,7 @@ function appendMessage(text, side) {
         chatBody.appendChild(msgDiv);
     }
     chatBody.scrollTop = chatBody.scrollHeight;
+    if (side === 'admin' && isSupportOpen()) markSeenNow(); // الرسالة اتشافت لأن الشات مفتوح
 }
 
 // وظيفة لإغلاق الدرج العلوي عند النقر على الـ overlay
